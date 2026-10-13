@@ -9,6 +9,7 @@ import sys
 import subprocess
 import datetime
 import shutil
+from urllib.parse import urlencode
 
 # Color Codes
 CYAN = "\033[1;36m"
@@ -138,6 +139,13 @@ def quick_push(project_dir):
         print(f"{GREEN}Working tree clean (no new file changes).{RESET}")
 
     print(f"\n{CYAN}🚀 Pushing to GitHub ({branch})...{RESET}")
+    if any(char.isspace() for char in remote):
+        corrected_remote = "-".join(remote.split())
+        print(f"\n{RED}❌ The origin URL contains spaces and is not a valid GitHub repository URL.{RESET}")
+        print(f"Create the matching repository on GitHub, then run:")
+        print(f'  git remote set-url origin "{corrected_remote}"')
+        return
+
     success = run_cmd(f"git push origin {branch}", cwd=project_dir)
 
     if success:
@@ -225,6 +233,11 @@ def create_repository(project_dir):
     if not repo_name:
         repo_name = default_name
 
+    github_repo_name = "-".join(repo_name.split())
+    if not github_repo_name:
+        print(f"{RED}❌ Enter a valid GitHub repository name.{RESET}")
+        return None
+
     target_dir = os.path.join(DESKTOP_DIR, repo_name) if repo_name != default_name else project_dir
     os.makedirs(target_dir, exist_ok=True)
 
@@ -241,10 +254,12 @@ def create_repository(project_dir):
     run_cmd("git add .", cwd=target_dir)
     subprocess.run('git commit -m "Initial commit"', shell=True, cwd=target_dir)
     subprocess.run("git remote remove origin", shell=True, cwd=target_dir)
-    run_cmd(f'git remote add origin "git@github.com:Anil1310/{repo_name}.git"', cwd=target_dir)
+    remote_url = f"git@github.com:Anil1310/{github_repo_name}.git"
+    run_cmd(f'git remote add origin "{remote_url}"', cwd=target_dir)
 
     print(f"\n{CYAN}Opening GitHub in browser to create remote repository...{RESET}")
-    subprocess.run(f'open "https://github.com/new?name={repo_name}"', shell=True)
+    create_url = f"https://github.com/new?{urlencode({'name': github_repo_name})}"
+    subprocess.run(["open", create_url])
 
     print(f"\n{GREEN}>>> Step:{RESET} In your browser, click the green {BOLD}'Create repository'{RESET} button.")
     print(f"    (Leave 'Add a README' unchecked since we already initialized it).")
@@ -256,9 +271,10 @@ def create_repository(project_dir):
     print(f"\n{CYAN}Uploading to GitHub...{RESET}")
     success = run_cmd("git push -u origin main", cwd=target_dir)
     if success:
-        print(f"\n{GREEN}🎉 SUCCESS! Repository live at: https://github.com/Anil1310/{repo_name}{RESET}")
+        repository_url = f"https://github.com/Anil1310/{github_repo_name}"
+        print(f"\n{GREEN}🎉 SUCCESS! Repository live at: {repository_url}{RESET}")
         try:
-            subprocess.run(f'open "https://github.com/Anil1310/{repo_name}"', shell=True)
+            subprocess.run(["open", repository_url])
         except Exception:
             pass
         return target_dir
@@ -403,4 +419,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
