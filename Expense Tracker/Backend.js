@@ -117,6 +117,50 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+function doPost(e) {
+    try {
+        const request = JSON.parse(e.postData.contents);
+        const handlers = {
+            addEntry: (...args) => addEntry(...args),
+            addItemToList: (...args) => addItemToList(...args),
+            checkLogin: (...args) => checkLogin(...args),
+            deleteEntry: (...args) => deleteEntry(...args),
+            generateAndEmailPDF: (...args) => generateAndEmailPDF(...args),
+            getAllData: (...args) => getAllData(...args),
+            getConsolidatedData: (...args) => getConsolidatedData(...args),
+            getEntryByUniqueId: (...args) => getEntryByUniqueId(...args),
+            getGraphsData: (...args) => getGraphsData(...args),
+            getItemList: (...args) => getItemList(...args),
+            getMonthlyData: (...args) => getMonthlyData(...args),
+            getProfilePhoto: (...args) => getProfilePhoto(...args),
+            getSummaryData: (...args) => getSummaryData(...args),
+            getTrashData: (...args) => getTrashData(...args),
+            getYearlyData: (...args) => getYearlyData(...args),
+            restoreEntry: (...args) => restoreEntry(...args),
+            runCompleteProcess: (...args) => runCompleteProcess(...args),
+            saveProfilePhoto: (...args) => saveProfilePhoto(...args)
+        };
+
+        if (!request || typeof request.method !== "string" ||
+            !Object.prototype.hasOwnProperty.call(handlers, request.method) ||
+            !Array.isArray(request.args)) {
+            throw new Error("Invalid or unsupported API request.");
+        }
+
+        const result = handlers[request.method](...request.args);
+        return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            result: result === undefined ? null : result
+        })).setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+        console.error("Netlify API Error: " + error.message);
+        return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            error: error.message || "Apps Script request failed."
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
 function include(filename) {
     return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }

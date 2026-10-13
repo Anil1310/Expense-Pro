@@ -106,6 +106,17 @@ If you prefer editing files locally, you can use [CLASP](https://github.com/goog
 4.  Click **Deploy** and authorize the necessary Google Drive, Gmail, and Spreadsheet permissions.
 5.  Copy the generated **Web App URL**. This is your live application link!
 
+### Host the frontend on Netlify (Google Apps Script backend)
+The Netlify build serves the Expense Tracker interface from Netlify and forwards its API calls to Google Apps Script. Sheets, Gmail, and the Apps Script backend remain in Google.
+
+1. Deploy the Apps Script project as a web app with access set to **Anyone**. Copy its URL ending in `/exec`.
+2. In Netlify, choose **Add new site** > **Import an existing project**, connect GitHub, and select `Anil1310/Expense-Pro`.
+3. Netlify reads `netlify.toml` and builds the static frontend and API function from the repository.
+4. In the Netlify site settings, add the environment variable `APPS_SCRIPT_WEB_APP_URL` with the Apps Script `/exec` URL as its value, then trigger a deploy.
+5. When changing Apps Script backend code, push it with `clasp` and update the same Apps Script deployment. GitHub pushes trigger Netlify frontend deploys automatically.
+
+The Netlify site URL hosts the interface; the Apps Script deployment remains the backend. Do not use Netlify's manual ZIP upload for this site because it does not deploy the required Netlify Function. Keep the GitHub repository private because the source contains spreadsheet identifiers.
+
 ---
 
 ## 🔒 Security & Data Integrity

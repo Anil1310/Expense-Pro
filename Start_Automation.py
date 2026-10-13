@@ -176,6 +176,34 @@ def deploy_netlify(project_dir):
     subprocess.run(["node", helper_path, project_dir])
 
 
+def create_netlify_site(project_dir):
+    """Open Netlify's Git import flow for this project's configured build."""
+    if not os.path.isfile(os.path.join(project_dir, "netlify.toml")):
+        print(f"{RED}Error: netlify.toml not found; configure the project for Netlify first.{RESET}")
+        return
+
+    try:
+        remote = subprocess.check_output(
+            ["git", "remote", "get-url", "origin"],
+            cwd=project_dir,
+            text=True
+        ).strip()
+    except subprocess.CalledProcessError:
+        print(f"{RED}Error: configure a GitHub origin before connecting this project to Netlify.{RESET}")
+        return
+
+    print(f"\n{CYAN}Connect this GitHub repository to Netlify:{RESET}")
+    print(f"  Repository: {remote}")
+    print("  1. Import this repository in Netlify and authorize GitHub access.")
+    print("  2. Keep the build settings from netlify.toml.")
+    print("  3. Set APPS_SCRIPT_WEB_APP_URL to your Apps Script /exec URL.")
+    print("  4. Deploy the site from Netlify.")
+    try:
+        subprocess.run(["open", "https://app.netlify.com/start"], check=True)
+    except subprocess.CalledProcessError as error:
+        print(f"{RED}Could not open Netlify in the browser (exit code {error.returncode}).{RESET}")
+
+
 def delete_netlify(project_dir):
     """Run Netlify interactive project deletion tool."""
     helper_path = os.path.join(project_dir, "helper_netlify.js")
@@ -187,6 +215,54 @@ def delete_netlify(project_dir):
         return
 
     subprocess.run(["node", helper_path, project_dir, "--delete"])
+
+
+def deploy_apps_script(project_dir):
+    """Push the Apps Script source and update or create a deployment."""
+    if not os.path.isfile(os.path.join(project_dir, ".clasp.json")):
+        print(f"{RED}Error: .clasp.json not found; this folder is not linked to an Apps Script project.{RESET}")
+        return
+    if not os.path.isfile(os.path.join(project_dir, "appsscript.json")):
+        print(f"{RED}Error: appsscript.json not found in the selected project.{RESET}")
+        return
+
+    clasp = shutil.which("clasp")
+    if not clasp:
+        print(f"{RED}Error: clasp is not installed or is not available on PATH.{RESET}")
+        print("Install it with: npm install -g @google/clasp")
+        return
+
+    try:
+        print(f"\n{CYAN}Uploading source to Google Apps Script...{RESET}")
+        subprocess.run([clasp, "push"], cwd=project_dir, check=True)
+        print(f"\n{CYAN}Existing deployments:{RESET}")
+        subprocess.run([clasp, "deployments"], cwd=project_dir, check=True)
+    except subprocess.CalledProcessError as error:
+        print(f"{RED}❌ clasp command failed (exit code {error.returncode}). Check clasp login and project configuration.{RESET}")
+        return
+
+    try:
+        deployment_id = input(
+            f"\n{YELLOW}Deployment ID to update, ENTER to create a new deployment, or 'c' to stop: {RESET}"
+        ).strip()
+        if deployment_id.lower() in ("c", "cancel"):
+            print(f"{YELLOW}Source was pushed, but deployment was not changed.{RESET}")
+            return
+        description = input(f"{YELLOW}Deployment description [Expense Pro update]: {RESET}").strip()
+    except (EOFError, KeyboardInterrupt):
+        print(f"\n{YELLOW}Source was pushed, but deployment was not changed.{RESET}")
+        return
+
+    description = description or "Expense Pro update"
+    command = [clasp, "deploy", "-d", description]
+    if deployment_id:
+        command.extend(["-i", deployment_id])
+
+    try:
+        subprocess.run(command, cwd=project_dir, check=True)
+        print(f"\n{GREEN}✅ Apps Script deployment completed.{RESET}")
+    except subprocess.CalledProcessError as error:
+        print(f"{RED}❌ Apps Script deployment failed (exit code {error.returncode}). The source was pushed, but the deployment was not updated.{RESET}")
 
 
 def delete_github(project_dir):
@@ -359,15 +435,19 @@ def main():
 
             print(f"  {CYAN}{BOLD}--- 🌐 NETLIFY AUTOMATION ---{RESET}")
             print(f"  {GREEN}[6]{RESET}  🚀 {BOLD}Deploy to Netlify{RESET}        {DIM}(Interactive 1, 2, 3 project selector){RESET}")
-            print(f"  {RED}[7]{RESET}  🗑️  {BOLD}Delete Netlify Project{RESET}   {DIM}(Permanently remove unwanted Netlify site){RESET}\n")
+            print(f"  {GREEN}[7]{RESET}  ✨ {BOLD}Connect GitHub Repo to Netlify{RESET} {DIM}(Import repo and configure a new site){RESET}")
+            print(f"  {RED}[8]{RESET}  🗑️  {BOLD}Delete Netlify Project{RESET}   {DIM}(Permanently remove unwanted Netlify site){RESET}\n")
+
+            print(f"  {CYAN}{BOLD}--- 📜 GOOGLE APPS SCRIPT ---{RESET}")
+            print(f"  {GREEN}[9]{RESET}  🚀 {BOLD}Deploy Apps Script Update{RESET} {DIM}(clasp push, then update or create deployment){RESET}\n")
 
             print(f"  {CYAN}{BOLD}--- ⚙️  WORKSPACE & EXIT ---{RESET}")
-            print(f"  {GREEN}[8]{RESET}  📊 {BOLD}View Project Info & Status{RESET} {DIM}(Show branch, recent commits, live links){RESET}")
-            print(f"  {GREEN}[9]{RESET}  📁 {BOLD}Switch Working Project{RESET}     {DIM}(Select another Desktop project){RESET}")
-            print(f"  {RED}[10]{RESET} ❌ {BOLD}Exit{RESET}\n")
+            print(f"  {GREEN}[10]{RESET} 📊 {BOLD}View Project Info & Status{RESET} {DIM}(Show branch, recent commits, live links){RESET}")
+            print(f"  {GREEN}[11]{RESET} 📁 {BOLD}Switch Working Project{RESET}     {DIM}(Select another Desktop project){RESET}")
+            print(f"  {RED}[12]{RESET} ❌ {BOLD}Exit{RESET}\n")
 
             try:
-                choice = input(f"{YELLOW}{BOLD}Enter choice (1-10): {RESET}").strip()
+                choice = input(f"{YELLOW}{BOLD}Enter choice (1-12): {RESET}").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nExiting...")
                 break
@@ -389,10 +469,14 @@ def main():
         elif choice == "6":
             deploy_netlify(target_project)
         elif choice == "7":
-            delete_netlify(target_project)
+            create_netlify_site(target_project)
         elif choice == "8":
-            view_status(target_project)
+            delete_netlify(target_project)
         elif choice == "9":
+            deploy_apps_script(target_project)
+        elif choice == "10":
+            view_status(target_project)
+        elif choice == "11":
             all_projs = list_desktop_projects()
             print(f"\n{BOLD}Available Desktop Projects:{RESET}")
             for i, p in enumerate(all_projs, start=1):
@@ -405,11 +489,11 @@ def main():
                     print(f"{GREEN}Switched to: {os.path.basename(target_project)}{RESET}")
             except (EOFError, KeyboardInterrupt):
                 pass
-        elif choice in ("10", "q", "exit"):
+        elif choice in ("12", "q", "exit"):
             print(f"\n{GREEN}Goodbye! 👋{RESET}\n")
             break
         else:
-            print(f"{RED}Invalid selection. Please choose 1 to 10.{RESET}")
+            print(f"{RED}Invalid selection. Please choose 1 to 12.{RESET}")
 
         try:
             input(f"\n{DIM}Press [ENTER] to return to menu...{RESET}")
