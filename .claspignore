@@ -1,5 +1,15 @@
+<<<<<<< HEAD
+=======
+dist/**
+netlify/**
+scripts/**
+.netlify-site.json
+>>>>>>> origin/main
 .gitignore
 .DS_Store
 .venv/**
 __pycache__/**
+<<<<<<< HEAD
 README.md
+=======
+>>>>>>> origin/main
