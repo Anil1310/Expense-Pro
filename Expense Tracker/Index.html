@@ -1,0 +1,1508 @@
+<!--===================================+
+Expense Tracker Pro: 2026 Frontend Code
+=====================================-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Expenses Tracker Pro</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Google Fonts – Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS for Excel (.xlsx) Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <?!=include('Expense Tracker/Style'); ?>
+
+  <script>
+    // Global initial data from server
+    window.SERVER_INITIAL_DATA = <?!= initialData ?>;
+  </script>
+
+</head>
+
+<body class="dashboard-active">
+  <!-- SaaS Progress Bar -->
+  <div id="nprogress" class="d-none">
+    <div class="bar"></div>
+  </div>
+
+  <!-- SaaS Command Palette -->
+  <div id="command-palette-overlay" class="command-palette-overlay" onclick="closeCommandPalette(event)">
+    <div class="command-palette" onclick="event.stopPropagation()">
+      <div class="command-input-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="text" id="command-input" class="command-input" placeholder="Type a command or search..."
+          oninput="filterCommands()">
+      </div>
+      <div id="command-results" class="command-results">
+        <!-- Results populated via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Section -->
+  <div id="login-section" class="d-none">
+    <div class="login-container">
+      <!-- Logo Container -->
+      <div class="login-logo-container">
+        <div class="login-logo-inner">
+          <i class="fas fa-wallet"></i>
+        </div>
+      </div>
+
+      <h1 class="login-title">Expenses Tracker Pro</h1>
+      <p class="login-subtitle">Secure Access</p>
+
+      <!-- Username Dropdown -->
+      <div class="mb-3">
+        <label for="username" class="login-label">User Profile</label>
+        <div class="login-input-wrapper">
+          <i class="fas fa-user login-input-icon"></i>
+          <select id="username" class="login-input" onchange="selectUsername(this)">
+            <option value="">Select User</option>
+            <option value="Anil Chahar">Anil Chahar</option>
+            <option value="Radhika Chahar">Radhika Chahar</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div class="mb-4">
+        <label for="password" class="login-label">Security PIN</label>
+        <div class="login-input-wrapper position-relative">
+          <i class="fas fa-lock login-input-icon"></i>
+          <input type="password" id="password" class="login-input" placeholder="Password" value="4566" required>
+          <i class="fas fa-eye login-password-toggle" onclick="togglePassword()"></i>
+        </div>
+      </div>
+
+      <!-- Quick Login Section -->
+      <div class="mb-4">
+        <label class="login-label mb-2">Quick Access</label>
+        <div class="quick-login-row d-flex gap-3">
+          <div class="quick-login-card flex-fill" onclick="quickLogin('Anil Chahar')">
+            <div class="quick-avatar admin">
+              <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="quick-info">
+              <span class="quick-name">Anil Chahar</span>
+              <span class="quick-role">Admin</span>
+            </div>
+          </div>
+          <div class="quick-login-card flex-fill" onclick="quickLogin('Radhika Chahar')">
+            <div class="quick-avatar user">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="quick-info">
+              <span class="quick-name">Radhika Chahar</span>
+              <span class="quick-role">User</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Login Button -->
+      <button id="login-btn" class="login-btn" onclick="login()">
+        <i class="fas fa-sign-in-alt me-2"></i>Sign In
+      </button>
+
+      <div id="error-msg" class="error-message"></div>
+    </div>
+  </div>
+
+
+  <!-- Main App -->
+  <div id="main-app" class="app-container d-none">
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav d-md-none">
+      <a class="bottom-nav-item" data-page="dashboard" onclick="showPage('dashboard')">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </a>
+      <a class="bottom-nav-item" data-page="reports" onclick="showPage('reports')">
+        <i class="fas fa-chart-bar"></i>
+        <span>Reports</span>
+      </a>
+      <a class="bottom-nav-item" data-page="data" onclick="showPage('data')">
+        <i class="fas fa-clipboard-list"></i>
+        <span>Summary</span>
+      </a>
+      <a class="bottom-nav-item" data-page="graphs" onclick="showPage('graphs')">
+        <i class="fas fa-chart-line"></i>
+        <span>Analytics</span>
+      </a>
+      <a class="bottom-nav-item" data-page="categories" onclick="showPage('categories')">
+        <i class="fas fa-tags"></i>
+        <span>Insights</span>
+      </a>
+      <a onclick="document.getElementById('avatarUpload').click()" class="bottom-nav-item" style="padding: 0;">
+        <div class="mobile-bottom-avatar"
+          style="width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.1);">
+          <i class="fas fa-user default-avatar-icon" style="font-size: 1rem; margin: 0;"></i>
+          <img class="user-avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover;"
+            alt="Profile">
+        </div>
+        <span style="font-size: 0.6rem; margin-top: 4px;">Profile</span>
+      </a>
+      <a class="bottom-nav-item" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Exit</span>
+      </a>
+    </nav>
+
+    <!-- Mobile Floating Action Button -->
+    <div class="fab-container d-md-none">
+      <button class="fab fab-primary shadow-lg" onclick="showAddModal()" title="Add Expense">
+        <i class="fas fa-plus"></i>
+      </button>
+    </div>
+
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title"><i class="fas fa-wallet"
+            style="font-size: 1rem; margin-right: 8px; color: #eab308 !important;"></i>Expenses Pro</h2>
+        <button class="toggle-btn" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+
+      <div class="user-info">
+        <div class="user-avatar" onclick="document.getElementById('avatarUpload').click()"
+          title="Click to change profile photo">
+          <i class="fas fa-user default-avatar-icon"></i>
+          <img class="user-avatar-img" src=""
+            style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;" alt="Profile">
+          <div class="avatar-overlay"><i class="fas fa-camera"></i></div>
+        </div>
+        <input type="file" id="avatarUpload" accept="image/*" style="display:none"
+          onchange="handleAvatarSelection(event)">
+        <div class="user-details">
+          <div class="user-name" id="user-name-display"></div>
+          <div class="user-role">
+            <span id="user-role-badge" class="user-badge"></span>
+          </div>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a class="nav-link active" data-page="dashboard" onclick="showPage('dashboard')">
+            <i class="fas fa-home nav-icon" style="color: #3b82f6 !important;"></i>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-page="reports" onclick="showPage('reports')">
+            <i class="fas fa-chart-bar nav-icon" style="color: #ec4899 !important;"></i>
+            <span class="nav-text">Reports</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-page="data" onclick="showPage('data')">
+            <i class="fas fa-clipboard-list nav-icon" style="color: #10b981 !important;"></i>
+            <span class="nav-text">Summary</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-page="graphs" onclick="showPage('graphs')">
+            <i class="fas fa-chart-line nav-icon" style="color: #a855f7 !important;"></i>
+            <span class="nav-text">Analytics</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-page="yearly-chart" onclick="showPage('yearly-chart')">
+            <i class="fas fa-chart-bar nav-icon" style="color: #06b6d4 !important;"></i>
+            <span class="nav-text">Charts</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-page="categories" onclick="showPage('categories')">
+            <i class="fas fa-tags nav-icon" style="color: #f59e0b !important;"></i>
+            <span class="nav-text">Insights</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" onclick="applyFormula(CURRENT_MONTH)" style="cursor:pointer;">
+            <i class="fas fa-robot nav-icon" style="color: #10b981 !important;"></i>
+            <span class="nav-text">Automate</span>
+          </a>
+        </li>
+
+        <!-- Fixed Months Submenu -->
+        <li class="nav-item">
+          <a id="monthsNavLink" class="nav-link" data-bs-toggle="collapse" data-bs-target="#monthsSubmenu"
+            aria-expanded="false" aria-controls="monthsSubmenu" onclick="handleMonthsMenu(event)">
+            <i class="fas fa-calendar-alt nav-icon" style="color: #38bdf8 !important;"></i>
+            <span class="nav-text">Months</span>
+            <i class="fas fa-chevron-down arrow ms-auto"
+              style="font-size: 0.6rem; transition: transform 0.3s ease;"></i>
+          </a>
+          <ul class="collapse list-unstyled submenu" id="monthsSubmenu">
+            <li><a class="nav-link" data-month="Jan" onclick="showMonth('Jan')">Jan</a></li>
+            <li><a class="nav-link" data-month="Feb" onclick="showMonth('Feb')">Feb</a></li>
+            <li><a class="nav-link" data-month="Mar" onclick="showMonth('Mar')">Mar</a></li>
+            <li><a class="nav-link" data-month="Apr" onclick="showMonth('Apr')">Apr</a></li>
+            <li><a class="nav-link" data-month="May" onclick="showMonth('May')">May</a></li>
+            <li><a class="nav-link" data-month="Jun" onclick="showMonth('Jun')">Jun</a></li>
+            <li><a class="nav-link" data-month="Jul" onclick="showMonth('Jul')">Jul</a></li>
+            <li><a class="nav-link" data-month="Aug" onclick="showMonth('Aug')">Aug</a></li>
+            <li><a class="nav-link" data-month="Sep" onclick="showMonth('Sep')">Sep</a></li>
+            <li><a class="nav-link" data-month="Oct" onclick="showMonth('Oct')">Oct</a></li>
+            <li><a class="nav-link" data-month="Nov" onclick="showMonth('Nov')">Nov</a></li>
+            <li><a class="nav-link" data-month="Dec" onclick="showMonth('Dec')">Dec</a></li>
+          </ul>
+        </li>
+
+        <!-- Database Submenu -->
+        <li class="nav-item">
+          <a id="databaseNavLink" class="nav-link collapsed" data-bs-toggle="collapse" data-bs-target="#databaseSubmenu"
+            aria-expanded="false" onclick="handleDatabaseMenu(event)">
+            <i class="fas fa-database fa-fw nav-icon" style="color: #6366f1 !important;"></i>
+            <span class="nav-text">Database</span>
+            <i class="fas fa-chevron-down arrow ms-auto"
+              style="font-size: 0.6rem; transition: transform 0.3s ease;"></i>
+          </a>
+          <ul class="collapse list-unstyled submenu" id="databaseSubmenu">
+            <li style="margin-bottom: 1px;">
+              <a class="nav-link" style="cursor: pointer; padding: 4px 6px;"
+                onclick="window.open('https://docs.google.com/spreadsheets/d/1WK0QOkrz4c7Fl-wvkLKrH1gPODxkF3stvYajR5lVM0M/edit?', '_blank')">
+                <i class="fas fa-file-excel fa-fw" style="margin-right: 8px; color: #0F9D58;"></i>
+                <span>Sheet</span>
+              </a>
+            </li>
+            <li style="margin-bottom: 0;">
+              <a class="nav-link" style="cursor: pointer; padding: 4px 6px;"
+                onclick="window.open('https://docs.google.com/spreadsheets/d/1lCkNPBkVABweit6dD-3atsP71O0qsBnbuH1rlvzqtV8/edit?', '_blank')">
+                <i class="fas fa-database fa-fw" style="margin-right: 8px; color: #4285F4;"></i>
+                <span>Master</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Dark Mode Toggle -->
+        <!-- <li class="nav-item">
+          <a class="nav-link theme-toggle"  onclick="toggleTheme()" title="Toggle Theme">
+            <i class="fas fa-moon fa-fw nav-icon"></i>
+          </a>
+        </li>
+      </ul> -->
+
+        <button class="logout-btn" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="main-content">
+      <!-- Alert Area -->
+      <div id="alert-area"></div>
+
+      <!-- Dashboard Page -->
+      <div id="dashboard-page" class="page-content">
+        <div class="header">
+          <h1 id="page-title" class="page-title">Dashboard</h1>
+          <div class="header-actions">
+            <div class="notification-wrapper">
+              <button id="dashboard-bell" class="header-icon-btn" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                title="Notifications" onclick="toggleNotifications('dashboard')">
+                <i class="fas fa-bell"></i>
+                <span id="dashboard-notification-count" class="notification-badge" style="display: none;">0</span>
+              </button>
+              <div id="dashboard-notification-dropdown" class="notification-dropdown">
+                <div class="notification-header">Latest Notifications</div>
+                <div id="dashboard-notification-list" class="notification-list"></div>
+              </div>
+            </div>
+            <button class="theme-toggle" data-bs-toggle="tooltip" data-bs-placement="bottom" onclick="toggleTheme()"
+              title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+            <button class="refresh-btn-header" data-bs-toggle="tooltip" data-bs-placement="bottom"
+              onclick="refreshCurrentMonth()" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="header-icon-btn summary-btn" data-bs-toggle="tooltip" data-bs-placement="bottom"
+              onclick="showMonthSummaryModal()" title="Month Summary">
+              <i class="fas fa-chart-pie" style="color: #3b82f6;"></i>
+            </button>
+            <button class="add-item-btn" data-bs-toggle="tooltip" data-bs-placement="bottom"
+              onclick="showAddItemModal()" title="Add Item">
+              <i class="fas fa-plus"></i>
+            </button>
+            <button class="header-icon-btn" data-bs-toggle="tooltip" data-bs-placement="bottom"
+              onclick="showTrashModal()" title="Recycle Bin">
+              <i class="fas fa-trash-restore" style="color: #ef4444;"></i>
+            </button>
+            <button class="add-btn" data-bs-toggle="tooltip" data-bs-placement="bottom" onclick="showAddModal()"
+              title="Add Expense">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Month Navigation -->
+        <div class="month-buttons">
+          <button class="month-btn active" onclick="showMonth('Jan')">Jan</button>
+          <button class="month-btn" onclick="showMonth('Feb')">Feb</button>
+          <button class="month-btn" onclick="showMonth('Mar')">Mar</button>
+          <button class="month-btn" onclick="showMonth('Apr')">Apr</button>
+          <button class="month-btn" onclick="showMonth('May')">May</button>
+          <button class="month-btn" onclick="showMonth('Jun')">Jun</button>
+          <button class="month-btn" onclick="showMonth('Jul')">Jul</button>
+          <button class="month-btn" onclick="showMonth('Aug')">Aug</button>
+          <button class="month-btn" onclick="showMonth('Sep')">Sep</button>
+          <button class="month-btn" onclick="showMonth('Oct')">Oct</button>
+          <button class="month-btn" onclick="showMonth('Nov')">Nov</button>
+          <button class="month-btn" onclick="showMonth('Dec')">Dec</button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+          <div class="stat-card total-expenses-card" onclick="showMonthSummaryModal()" title="Click to view detailed summary" style="cursor: pointer;">
+            <h6>Total Expenses</h6>
+            <p id="total-expenses" class="mb-0">₹0</p>
+            <span class="summary-indicator" style="font-size: 0.65rem; color: #3b82f6; opacity: 0.85; display: block; margin-top: 4px; font-weight: 700;">
+              <i class="fas fa-chart-pie me-1"></i>View Summary
+            </span>
+          </div>
+          <div class="stat-card">
+            <h6>Unique Categories</h6>
+            <p id="total-categories">0</p>
+          </div>
+          <div class="stat-card">
+            <h6>Days with Expenses</h6>
+            <p id="total-days">0</p>
+          </div>
+        </div>
+
+        <!-- Expense Table -->
+        <div class="table-container">
+          <div class="table-header d-flex justify-content-between align-items-center flex-nowrap"
+            style="padding: 0 16px; min-height: 32px; height: 32px;">
+            <div style="flex: 1; display: flex; align-items: center; justify-content: flex-start;">
+              <h3 id="table-title" class="table-title mb-0"
+                style="white-space: nowrap; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center;">
+                <span id="table-title-text">January Expenses</span>
+              </h3>
+            </div>
+
+            <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
+              <!-- Properly Centered Search Bar -->
+              <style>
+                #month-records-search::placeholder {
+                  color: #64748b !important;
+                  opacity: 0.8 !important;
+                  font-weight: 400 !important;
+                }
+
+                #month-records-search {
+                  background-color: #f1f5f9 !important;
+                  color: #334155 !important;
+                  border: 1px solid #cbd5e1 !important;
+                  margin: 0 !important;
+                }
+
+                body[data-theme="dark"] #month-records-search {
+                  background-color: rgba(255, 255, 255, 0.08) !important;
+                  color: #e2e8f0 !important;
+                  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+                }
+              </style>
+              <div class="search-wrapper" style="position: relative; width: 165px; margin: 0;">
+                <i class="fas fa-search"
+                  style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #64748b !important; z-index: 10; font-size: 0.72rem;"></i>
+                <input type="text" id="month-records-search" class="form-control" placeholder="Search..."
+                  style="padding-left: 24px; height: 24px; border-radius: 6px; font-size: 0.78rem; margin: 0 !important;"
+                  onkeyup="filterMonthRecords()">
+              </div>
+            </div>
+
+            <div style="flex: 1; display: flex; align-items: center; justify-content: flex-end; position: relative;">
+              <span id="dashboard-filtered-total" class="badge bg-success-soft text-success"
+                style="font-size: 0.72rem; font-weight: 700; display: none; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3); margin-right: 20px; background: rgba(16, 185, 129, 0.1);"></span>
+              <div id="dashboard-pagination" style="margin-right: 15px;"></div>
+              <div class="table-controls d-flex align-items-center" style="gap: 20px; white-space: nowrap;">
+                <button class="header-icon-btn" onclick="exportMonth(CURRENT_MONTH)" title="Export Excel"
+                  style="background: #000000 !important; color: #10b981 !important; border: none; height: 24px; width: 24px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <i class="fas fa-file-excel" style="font-size: 0.7rem; color: #10b981 !important;"></i>
+                </button>
+                <button class="header-icon-btn" onclick="downloadMonthReport(CURRENT_MONTH)" title="View PDF"
+                  style="background: #000000 !important; color: #ef4444 !important; border: none; height: 24px; width: 24px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <i class="fas fa-file-pdf" style="font-size: 0.7rem; color: #ef4444 !important;"></i>
+                </button>
+                <button class="header-icon-btn" onclick="showItemSummaryModal(CURRENT_MONTH)" title="View Item Summary"
+                  style="background: #000000 !important; color: #eab308 !important; border: none; height: 24px; width: 24px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <i class="fas fa-table-list" style="font-size: 0.7rem; color: #eab308 !important;"></i>
+                </button>
+                <button class="header-icon-btn" onclick="emailMonthReport(CURRENT_MONTH, this)" title="Mail Pdf" id="email-report-btn"
+                  style="background: #000000 !important; color: #3b82f6 !important; border: none; height: 24px; width: 24px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <i class="fas fa-envelope" style="font-size: 0.7rem; color: #3b82f6 !important;"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th onclick="toggleDashboardSort('sn')" style="cursor: pointer;">S.N <i class="fas fa-sort"></i></th>
+                  <th onclick="toggleDashboardSort('id')" style="cursor: pointer;">Unique ID <i class="fas fa-sort"></i>
+                  </th>
+                  <th onclick="toggleDashboardSort('date')" style="cursor: pointer;">Date <i class="fas fa-sort"></i>
+                  </th>
+                  <th onclick="toggleDashboardSort('item')" style="cursor: pointer;">Item List <i
+                      class="fas fa-sort"></i></th>
+                  <th onclick="toggleDashboardSort('amount')" style="cursor: pointer;">Amount <i
+                      class="fas fa-sort"></i></th>
+                  <th onclick="toggleDashboardSort('credit')" style="cursor: pointer; white-space: nowrap;">Credit &
+                    Remark <i class="fas fa-sort"></i></th>
+                  <th onclick="toggleDashboardSort('admin')" style="cursor: pointer;">Admin <i class="fas fa-sort"></i>
+                  </th>
+                  <th class="actions-header"><span class="actions-header-text">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="expense-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="loading-spinner" class="spinner-container d-none">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Reports Page -->
+      <div id="reports-page" class="page-content d-none">
+        <div class="header">
+          <h1 class="page-title">Reports</h1>
+          <div class="header-actions">
+            <div class="notification-wrapper">
+              <button id="reports-bell" class="header-icon-btn" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                title="Notifications" onclick="toggleNotifications('reports')">
+                <i class="fas fa-bell"></i>
+                <span id="reports-notification-count" class="notification-badge" style="display: none;">0</span>
+              </button>
+              <div id="reports-notification-dropdown" class="notification-dropdown">
+                <div class="notification-header">Latest Filtered Entries</div>
+                <div id="reports-notification-list" class="notification-list"></div>
+              </div>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+            <button class="refresh-btn-header" onclick="refreshReports()" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="add-item-btn" onclick="showAddItemModal()" title="Add Item" data-bs-toggle="tooltip"
+              data-bs-placement="bottom">
+              <i class="fas fa-plus"></i>
+            </button>
+            <button class="header-icon-btn" onclick="downloadMonthReport(document.getElementById('monthFilter')?.value || CURRENT_MONTH)" title="View PDF"
+              style="background: #000000 !important; color: #ef4444 !important; border: none; height: 32px; width: 32px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 5px;">
+              <i class="fas fa-file-pdf" style="font-size: 0.85rem; color: #ef4444 !important;"></i>
+            </button>
+            <button class="header-icon-btn" onclick="emailMonthReport(document.getElementById('monthFilter')?.value || CURRENT_MONTH, this)" title="Mail Pdf" id="reports-email-report-btn"
+              style="background: #000000 !important; color: #3b82f6 !important; border: none; height: 32px; width: 32px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 5px;">
+              <i class="fas fa-envelope" style="font-size: 0.85rem; color: #3b82f6 !important;"></i>
+            </button>
+            <button class="header-export-btn icon-only" onclick="exportAll()" title="Export All">
+              <i class="fas fa-download"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="quickSearch" placeholder="Search Across All Fields..."
+            oninput="enhancedFilterReports()">
+        </div>
+
+        <!-- Reports Stats Cards -->
+        <div class="reports-stats">
+
+          <div class="report-stat-card" style="background:#ffffff; color:#1e3a8a;">
+            <h6>Total Expenses</h6>
+            <p id="reports-total">₹0</p>
+          </div>
+
+          <div class="report-stat-card" style="background:#ffffff; color:#1e3a8a;">
+            <h6>Grand Total All</h6>
+            <p id="reports-year-total">₹0</p>
+          </div>
+
+          <div class="report-stat-card" style="background:#ffffff; color:#1e3a8a;">
+            <h6>Records Found</h6>
+            <p id="reports-count">0</p>
+          </div>
+
+          <div class="report-stat-card" style="background:#ffffff; color:#1e3a8a;">
+            <h6>Avg. per Record</h6>
+            <p id="reports-average">₹0</p>
+          </div>
+
+          <div class="report-stat-card" style="background:#ffffff; color:#1e3a8a;">
+            <h6>Max Amount</h6>
+            <p id="reports-max">₹0</p>
+          </div>
+
+        </div>
+
+
+        <!-- Enhanced Filter Section -->
+        <div class="filter-section">
+          <div class="filter-grid">
+            <div class="filter-group">
+              <label>Date</label>
+              <input type="date" id="dateFilter" class="filter-select" onchange="enhancedFilterReports()"
+                style="height: 28px;">
+            </div>
+            <div class="filter-group">
+              <label>Item</label>
+              <select id="itemFilter" class="filter-select" onchange="enhancedFilterReports()">
+                <option value="">All Items</option>
+                <!-- Items will be populated dynamically -->
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Month</label>
+              <select id="monthFilter" class="filter-select" onchange="clearDateFilter(); enhancedFilterReports(); handleReportsMonthSelect();">
+                <option value="">All Months</option>
+                <option value="Jan">Jan</option>
+                <option value="Feb">Feb</option>
+                <option value="Mar">Mar</option>
+                <option value="Apr">Apr</option>
+                <option value="May">May</option>
+                <option value="Jun">Jun</option>
+                <option value="Jul">Jul</option>
+                <option value="Aug">Aug</option>
+                <option value="Sep">Sep</option>
+                <option value="Oct">Oct</option>
+                <option value="Nov">Nov</option>
+                <option value="Dec">Dec</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Year</label>
+              <select id="yearFilter" class="filter-select" onchange="clearDateFilter(); enhancedFilterReports()">
+                <option value="">All Years</option>
+                <!-- Years will be populated dynamically -->
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Amount</label>
+              <select id="amountFilter" class="filter-select" onchange="enhancedFilterReports()">
+                <option value="">All Amounts</option>
+                <option value="0-500">₹0 - ₹500</option>
+                <option value="501-1000">₹501 - ₹1,000</option>
+                <option value="1001-5000">₹1,001 - ₹5,000</option>
+                <option value="5001+">Above ₹5,000</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <div class="filter-stats">
+              <div class="filter-stat">
+                Amount: <strong id="filtered-total">₹0</strong>
+              </div>
+              <div class="filter-stat">
+                Records: <strong id="filtered-count">0</strong>
+              </div>
+              <div class="filter-stat">
+                <span id="data-consistency" class="data-consistency-check data-consistent">
+                  <i class="fas fa-check-circle"></i> Data Consistent
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button onclick="refreshAllData()" class="sync-btn-round" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Sync Data">
+                <i class="fas fa-sync-alt"></i>
+              </button>
+              <button class="clear-filters-btn" onclick="clearAllFilters()" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Clear Filters">
+                <i class="fas fa-times-circle"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enhanced Reports Table -->
+        <div class="table-container">
+          <div class="table-header">
+            <h3 class="table-title">All Expenses Report <span id="header-amount-total"></span></h3>
+            <div class="table-controls">
+              <div id="reports-pagination"></div>
+              <button class="header-export-btn icon-only" onclick="exportFilteredData()" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Export Filtered Data">
+                <i class="fas fa-file-export"></i>
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th onclick="toggleReportsSort('sn')" style="cursor: pointer;">S.N <i class="fas fa-sort"></i></th>
+                  <th onclick="toggleReportsSort('id')" style="cursor: pointer;">Unique ID <i class="fas fa-sort"></i>
+                  </th>
+                  <th onclick="toggleReportsSort('date')" style="cursor: pointer;">Date <i class="fas fa-sort"></i></th>
+                  <th onclick="toggleReportsSort('item')" style="cursor: pointer;">Item List <i class="fas fa-sort"></i>
+                  </th>
+                  <th onclick="toggleReportsSort('amount')" style="cursor: pointer;">Amount <i class="fas fa-sort"></i>
+                  </th>
+                  <th onclick="toggleReportsSort('credit')" style="cursor: pointer;">Credit & Remark <i
+                      class="fas fa-sort"></i></th>
+                  <th onclick="toggleReportsSort('admin')" style="cursor: pointer;">Admin <i class="fas fa-sort"></i>
+                  </th>
+                  <th class="actions-header"><span class="actions-header-text">Actions</span></th>
+                      </tr>
+              </thead>
+              <tbody id="reports-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="reports-loading-spinner" class="spinner-container d-none">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA SUMMARY PAGE -->
+      <div id="data-page" class="page-content d-none">
+        <div class="header">
+          <h1 class="page-title">Data Summary</h1>
+          <div class="header-actions">
+            <div class="notification-wrapper">
+              <button class="header-icon-btn" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Notifications"
+                onclick="toggleNotifications('dashboard')">
+                <i class="fas fa-bell"></i>
+              </button>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+            <button class="refresh-btn-header" onclick="refreshDataSummary()" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <select id="summary-year" class="filter-select" onchange="refreshDataSummary()"
+              style="padding: 0.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary); margin-right: auto; font-weight: bold; height: 38px;">
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+            <button class="header-export-btn icon-only" onclick="exportSummary()" data-bs-toggle="tooltip"
+              data-bs-placement="bottom" title="Export Summary">
+              <i class="fas fa-download"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Overview -->
+        <div class="summary-grid">
+          <div class="summary-item">
+            <h5><i class="fas fa-coins me-2"></i>Yearly Overview</h5>
+            <!-- <h5><i class="fas fa-chart-bar me-2"></i>Yearly Overview</h5> -->
+            <div id="yearly-summary">
+              <p>Total Expenses: <span id="yearly-total" class="fw-bold">0</span></p>
+              <p>Average Monthly: <span id="monthly-average" class="fw-bold">0</span></p>
+              <p>Highest Month: <span id="highest-month" class="fw-bold">-</span></p>
+              <p>Lowest Month: <span id="lowest-month" class="fw-bold">-</span></p>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <h5><i class="fas fa-chart-bar me-2"></i>Category Distribution</h5>
+            <div id="category-distribution">
+              <!-- Category distribution will be populated here -->
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <h5><i class="fas fa-user me-2"></i>User Spending</h5>
+            <div id="user-spending">
+              <!-- User spending breakdown will be populated here -->
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <h5><i class="fas fa-credit-card me-2"></i>Payment Methods</h5>
+            <div id="payment-methods">
+              <!-- Payment methods breakdown will be populated here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Comparison Table -->
+        <div class="table-container">
+          <div class="table-header">
+            <h3 class="table-title">Monthly Comparison</h3>
+          </div>
+          <div class="table-responsive">
+            <table id="monthly-comparison-table" class="table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Total Expenses</th>
+                  <th>Avg. Daily</th>
+                  <th>Transactions</th>
+                  <th>Categories</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-comparison-body">
+                <!-- Monthly comparison data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top Categories -->
+        <div class="table-container">
+          <div class="table-header">
+            <h3 class="table-title">Top Spending Categories</h3>
+          </div>
+          <div class="table-responsive">
+            <table id="top-categories-table" class="table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Total Amount</th>
+                  <th>% of Total</th>
+                  <th>Transactions</th>
+                  <th>Avg. per Transaction</th>
+                </tr>
+              </thead>
+              <tbody id="top-categories-body">
+                <!-- Top categories data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRAPHS PAGE -->
+      <div id="graphs-page" class="page-content d-none">
+        <div class="header">
+          <h1 class="page-title">Visual Analytics</h1>
+          <div class="header-actions">
+            <div class="notification-wrapper">
+              <button class="header-icon-btn" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Notifications"
+                onclick="toggleNotifications('dashboard')">
+                <i class="fas fa-bell"></i>
+              </button>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+            <button class="refresh-btn-header" onclick="refreshGraphs()" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="header-export-btn icon-only" onclick="saveChartImage()" data-bs-toggle="tooltip"
+              data-bs-placement="bottom" title="Save Image">
+              <i class="fas fa-image"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Graph Filter Controls -->
+        <div class="filter-controls">
+          <select class="filter-select" id="graph-type" onchange="updateGraphs()">
+            <option value="monthly">Monthly Trends</option>
+            <option value="category">Category Distribution</option>
+            <option value="daily">Daily Patterns</option>
+            <option value="comparison">Year Comparison</option>
+            <option value="forecast">Spending Forecast</option>
+          </select>
+
+          <select class="filter-select" id="graph-year" onchange="updateGraphs()">
+            <option value="2021">2021</option>
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="all">All Years</option>
+          </select>
+
+          <select class="filter-select" id="graph-user" onchange="updateGraphs()">
+            <option value="all">All Users</option>
+            <option value="Anil Chahar">Anil Chahar</option>
+            <option value="Radhika Chahar">Radhika Chahar</option>
+          </select>
+        </div>
+
+        <!-- Main Chart Section -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5 id="main-chart-title">Monthly Spending Trends</h5>
+            <div class="chart-actions">
+              <button class="header-icon-btn" onclick="toggleChartType()" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Toggle Chart Type">
+                <i class="fas fa-exchange-alt"></i>
+              </button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Secondary Charts Grid -->
+        <div class="row g-2">
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="fas fa-pie-chart me-2"></i>Category Breakdown</h5>
+              <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="fas fa-chart-bar me-2"></i>Monthly Comparison</h5>
+              <div class="chart-container">
+                <canvas id="barChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Analysis Chart -->
+        <div class="chart-card">
+          <h5><i class="fas fa-chart-area me-2"></i>Detailed Analysis</h5>
+          <div class="chart-container">
+            <canvas id="detailedChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- YEARLY CHART PAGE -->
+      <div id="yearly-chart-page" class="page-content d-none">
+        <div class="header">
+          <h1 class="page-title">Yearly Expenses</h1>
+          <div class="header-actions">
+            <div class="notification-wrapper">
+              <button class="header-icon-btn" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Notifications"
+                onclick="toggleNotifications('dashboard')">
+                <i class="fas fa-bell"></i>
+              </button>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+            <button class="refresh-btn-header" onclick="loadYearlyChart()" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-2 mt-2">
+          <div class="col-md-6">
+            <div class="chart-card">
+              <div class="chart-header" style="margin-bottom: 5px;">
+                <h5 id="yearly-chart-title" style="font-size: 0.95rem;"><i class="fas fa-chart-bar me-2"></i>Year Wise
+                  Expenses</h5>
+              </div>
+              <div class="chart-container" style="position: relative; height:45vh; width:100%">
+                <canvas id="yearlyColChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="chart-card">
+              <div class="chart-header" style="margin-bottom: 5px;">
+                <h5 id="yearly-month-chart-title" style="font-size: 0.95rem;"><i class="fas fa-chart-line me-2"></i>Year
+                  & Month Wise Trends</h5>
+              </div>
+              <div class="chart-container" style="position: relative; height:45vh; width:100%">
+                <canvas id="yearlyMonthChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ranking Table -->
+        <div class="row mt-2">
+          <div class="col-12">
+            <div class="chart-card">
+              <div class="chart-header" style="margin-bottom: 5px;">
+                <h5 style="font-size: 0.95rem;"><i class="fas fa-trophy me-2 text-warning"></i>Yearly Expense Rankings
+                </h5>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th style="width: 20%; font-size: 0.8rem; border-bottom: 1px solid rgba(0,0,0,0.1);">Rank</th>
+                      <th style="width: 40%; font-size: 0.8rem; border-bottom: 1px solid rgba(0,0,0,0.1);">Year</th>
+                      <th
+                        style="width: 40%; text-align: right; font-size: 0.8rem; border-bottom: 1px solid rgba(0,0,0,0.1);">
+                        Total Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="yearly-ranking-body">
+                    <!-- Dynamic Rows here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOP CATEGORY PAGE -->
+      <div id="categories-page" class="page-content d-none">
+        <div class="header">
+          <h1 class="page-title">Category Insights</h1>
+          <div class="header-actions">
+            <select id="cat-month-filter" class="filter-select" onchange="applyCategoryFilters()"
+              style="padding: 0.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary); margin-right: auto; font-weight: bold; height: 38px;">
+              <option value="all">All Months</option>
+              <option value="Jan">Jan</option>
+              <option value="Feb">Feb</option>
+              <option value="Mar">Mar</option>
+              <option value="Apr">Apr</option>
+              <option value="May">May</option>
+              <option value="Jun">Jun</option>
+              <option value="Jul">Jul</option>
+              <option value="Aug">Aug</option>
+              <option value="Sep">Sep</option>
+              <option value="Oct">Oct</option>
+              <option value="Nov">Nov</option>
+              <option value="Dec">Dec</option>
+            </select>
+            <select id="cat-year-filter" class="filter-select" onchange="applyCategoryFilters()"
+              style="padding: 0.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary); margin-right: 0.5rem; font-weight: bold; height: 38px;">
+              <option value="all">All Years</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+            <button class="refresh-btn-header" onclick="loadCategoryExpenses(true)" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Cards - Modern Glassmorphism -->
+        <div class="row g-2 mb-3">
+          <div class="col-6 col-md-3">
+            <div class="categories-kpi-card">
+              <div class="kpi-icon-wrapper bg-primary-glow">
+                <i class="fas fa-tags"></i>
+              </div>
+              <div class="kpi-content">
+                <div class="kpi-label">Total Categories</div>
+                <div id="cat-kpi-total" class="kpi-value">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="categories-kpi-card">
+              <div class="kpi-icon-wrapper bg-purple-glow">
+                <i class="fas fa-wallet"></i>
+              </div>
+              <div class="kpi-content">
+                <div class="kpi-label">Highest Expense</div>
+                <div id="cat-kpi-highest" class="kpi-value" title="Highest Category">N/A</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="categories-kpi-card">
+              <div class="kpi-icon-wrapper bg-success-glow">
+                <i class="fas fa-arrow-up"></i>
+              </div>
+              <div class="kpi-content">
+                <div class="kpi-label">Total Spending</div>
+                <div id="cat-kpi-spending" class="kpi-value">₹0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="categories-kpi-card">
+              <div class="kpi-icon-wrapper bg-warning-glow">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <div class="kpi-content">
+                <div class="kpi-label">Average Category</div>
+                <div id="cat-kpi-avg" class="kpi-value">₹0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-md-7">
+            <div class="categories-premium-card">
+              <div class="insights-chart-header">
+                <h5><i class="fas fa-tags me-2"></i>Category Breakdown</h5>
+              </div>
+              <div class="table-responsive" style="max-height: 750px; overflow-y: auto;">
+                <table class="table table-hover table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th
+                        style="width: 15%; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Rank</th>
+                      <th
+                        style="width: 35%; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Category</th>
+                      <th
+                        style="width: 30%; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Progress</th>
+                      <th
+                        style="width: 20%; text-align: right; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Total Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="category-ranking-body">
+                    <!-- Dynamic Rows here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-5">
+            <div class="categories-premium-card" style="margin-bottom: 15px;">
+              <div class="insights-chart-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Category Distribution</h5>
+              </div>
+              <div id="category-chart-container" style="position: relative; height: 260px; width: 100%;">
+                <canvas id="categoryDistributionChart"></canvas>
+              </div>
+            </div>
+
+            <div class="categories-premium-card">
+              <div class="insights-chart-header">
+                <h5 id="category-details-title"><i class="fas fa-list me-2"></i>Category Details</h5>
+              </div>
+              <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
+                <table class="table table-hover table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th
+                        style="font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Date</th>
+                      <th
+                        style="font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Remark/Credit</th>
+                      <th
+                        style="text-align: right; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);">
+                        Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="category-details-body">
+                    <tr>
+                      <td colspan="3" class="text-center text-muted">Click a category row to see more records</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry Modal -->
+  <div class="modal fade" id="entryModal" tabindex="-1" aria-labelledby="entryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">
+            <i class="fas fa-receipt me-2"></i>Add New Record
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="entryForm">
+            <input type="hidden" id="editUniqueId">
+            <input type="hidden" id="editMonth">
+            <div class="mb-2">
+              <label for="date" class="form-label">Date</label>
+              <input type="date" class="form-control" id="date" required>
+            </div>
+            <div class="mb-3 position-relative" id="itemSelectorContainer">
+              <label for="itemSearchInput" class="form-label"
+                style="font-weight: 700; font-size: 0.85rem; color: #1e293b; margin-bottom: 5px;"> Item Dropdown
+                List</label>
+              <div class="position-relative">
+                <input type="text" id="itemSearchInput" class="form-control" placeholder="Select Items"
+                  oninput="filterItemsDropdown()" onfocus="showInitialItems()" onkeydown="handleItemKeyDown(event)"
+                  autocomplete="off"
+                  style="height: 34px; border-radius: 8px; border: 2px solid #cbd5e1; padding: 0 12px; font-size: 0.85rem; width: 100%; transition: all 0.2s; background: #fff;">
+
+                <div id="autocompleteResults" class="autocomplete-results d-none">
+                  <!-- Dynamic results go here -->
+                </div>
+              </div>
+
+              <!-- Hidden legacy dropdown for compatibility -->
+              <select class="d-none" id="itemListDropdown"></select>
+            </div>
+            <div class="mb-2">
+              <label for="itemList" class="form-label">Item List</label>
+              <input type="text" class="form-control" id="itemList" placeholder="Enter item name" required>
+            </div>
+            <div class="mb-2">
+              <label for="amount" class="form-label">Amount</label>
+              <input type="number" class="form-control" id="amount" placeholder="Enter amount" step="0.01" required>
+            </div>
+            <div class="mb-2">
+              <label for="credit" class="form-label">Credit & Remark</label>
+              <input type="text" class="form-control" id="credit" placeholder="Enter Remarks / Credit Details">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveEntry()">Save Record</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ♻️ Trash / Recycle Bin Modal -->
+  <div class="modal fade" id="trashModal" tabindex="-1" aria-labelledby="trashModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+        <div class="modal-header"
+          style="background: linear-gradient(135deg,#ef4444,#b91c1c); color:white; padding:14px 18px;">
+          <h5 class="modal-title" id="trashModalLabel" style="font-weight:800; font-size:1rem;">
+            <i class="fas fa-trash-restore me-2"></i>Recycle Bin — Deleted Entries
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding:0;">
+          <div id="trash-loading" class="text-center py-4" style="display:none;">
+            <i class="fas fa-spinner fa-spin fa-2x" style="color:#ef4444;"></i>
+            <p class="mt-2" style="color:#6b7280;">Loading deleted entries...</p>
+          </div>
+          <div id="trash-empty" class="text-center py-5" style="display:none;">
+            <i class="fas fa-check-circle fa-3x" style="color:#10b981;"></i>
+            <p class="mt-3 fw-bold" style="color:#374151;">Recycle Bin is Empty</p>
+            <p style="color:#6b7280;font-size:0.85rem;">No deleted entries found.</p>
+          </div>
+          <table class="table mb-0" id="trash-table" style="display:none; font-size:0.8rem;">
+            <thead style="background:#fef2f2;">
+              <tr style="font-size:0.78rem; color:#991b1b; font-weight:700;">
+                <th style="padding:10px 12px;">Item</th>
+                <th>Date</th>
+                <th>Month</th>
+                <th>Amount</th>
+                <th>Credit / Remark</th>
+                <th>Deleted By</th>
+                <th>Deleted At</th>
+                <th style="text-align:center;">Restore</th>
+              </tr>
+            </thead>
+            <tbody id="trash-table-body"></tbody>
+          </table>
+        </div>
+        <div class="modal-footer" style="padding:10px 16px; justify-content:space-between;">
+          <small style="color:#9ca3af;"><i class="fas fa-info-circle me-1"></i>Restoring moves the entry back to its
+            original month sheet.</small>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Item Modal -->
+  <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-tag me-2"></i>Add New List Item
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addItemForm">
+            <div class="mb-3">
+              <label for="newItemName" class="form-label">Item Name</label>
+              <input type="text" class="form-control" id="newItemName" placeholder="Enter New Item Name" required>
+              <div class="form-text">This Item Will Be Added Into List Sheet(Col B)</div>
+            </div>
+            <div class="mb-3">
+              <label for="itemCategory" class="form-label">Category</label>
+              <select class="form-control" id="itemCategory">
+                <option value="">Select Category</option>
+                <option value="Food">Food</option>
+                <option value="Transport">Transport</option>
+                <option value="Baby Care">Baby Care</option>
+                <option value="Festivals">Festivals / Pooja</option>
+                <option value="Education">Education / School</option>
+                <option value="Electronics">Electronics / Appliances</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Bills">Bills / Utilities</option>
+                <option value="Medical">Medical / Health</option>
+                <option value="Personal Care">Personal Care</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="addToDropdown">
+              <label class="form-check-label" for="addToDropdown">Add 2 Dropdown List Immediately!</label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="saveNewItem()">
+            <i class="fas fa-save me-1"></i>Save Item
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Delete</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete?! This action can't be undone.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn"
+            onclick="confirmActualDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Entry Modal -->
+  <div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content" style="border-radius:14px;overflow:hidden;">
+        <div class="modal-header" style="background:linear-gradient(135deg,#4361ee,#7209b7);color:#fff;padding:14px 18px;">
+          <h5 class="modal-title" style="font-weight:800;font-size:1rem;"><i class="fas fa-eye me-2"></i>Entry Details</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+          <table style="width:100%;font-size:0.9rem;">
+            <tr><td style="padding:8px 12px;font-weight:600;color:#64748b;width:40%;">Unique ID</td><td id="view-unique-id" style="padding:8px 12px;font-weight:700;color:#0f172a;"></td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:8px 12px;font-weight:600;color:#64748b;">Date</td><td id="view-date" style="padding:8px 12px;font-weight:700;color:#0f172a;"></td></tr>
+            <tr><td style="padding:8px 12px;font-weight:600;color:#64748b;">Item</td><td id="view-item" style="padding:8px 12px;font-weight:700;color:#0f172a;"></td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:8px 12px;font-weight:600;color:#64748b;">Amount</td><td id="view-amount" style="padding:8px 12px;font-weight:700;color:#059669;"></td></tr>
+            <tr><td style="padding:8px 12px;font-weight:600;color:#64748b;">Credit / Remark</td><td id="view-credit" style="padding:8px 12px;font-weight:700;color:#0f172a;"></td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:8px 12px;font-weight:600;color:#64748b;">Added By</td><td id="view-user" style="padding:8px 12px;font-weight:700;color:#0f172a;"></td></tr>
+            <tr><td style="padding:8px 12px;font-weight:600;color:#64748b;">Month</td><td id="view-month" style="padding:8px 12px;font-weight:700;color:#0f172a;"></td></tr>
+          </table>
+        </div>
+        <div class="modal-footer" style="padding:12px 18px;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- PDF Preview Modal -->
+  <div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 95%; height: 95%; margin: 1.75rem auto;">
+      <div class="modal-content" style="height: 100%; background: #ffffff; border-radius: 14px; overflow: hidden; border: none;">
+        <div class="modal-header border-bottom" style="padding: 15px 20px; background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;">
+          <h5 class="modal-title fw-bold" id="pdfPreviewModalLabel" style="font-weight:800; font-size:1.1rem;"><i class="fas fa-file-pdf text-danger me-2"></i>Statement Print Preview</h5>
+          <div class="d-flex align-items-center" style="gap: 12px;">
+            <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="printPreviewPDF()" style="box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); background-color: #3b82f6; border: none;"><i class="fas fa-print me-1"></i>Print / Save PDF</button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body p-0" style="height: calc(100% - 65px); overflow: hidden; background: #e2e8f0;">
+          <iframe id="pdfPreviewIframe" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Month Summary Modal -->
+  <div class="modal fade" id="monthSummaryModal" tabindex="-1" aria-labelledby="monthSummaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content" style="border-radius: 16px; overflow: hidden; border: none; box-shadow: var(--shadow-xl);">
+        <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 16px 20px; border: none;">
+          <h5 class="modal-title fw-bold" id="monthSummaryModalLabel" style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-chart-pie"></i> <span id="summary-modal-title">Month Expenditure Summary</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <!-- Quick KPI Stats Cards -->
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-3 text-center summary-kpi-card">
+                <span class="text-muted d-block small mb-1">Total Spent</span>
+                <h5 class="fw-bold mb-0" id="summary-total-spent" style="color: var(--primary-color);">₹0</h5>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-3 text-center summary-kpi-card">
+                <span class="text-muted d-block small mb-1">Categories</span>
+                <h5 class="fw-bold mb-0 text-info" id="summary-total-categories">0</h5>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-3 text-center summary-kpi-card">
+                <span class="text-muted d-block small mb-1">Days Logged</span>
+                <h5 class="fw-bold mb-0 text-success" id="summary-days-logged">0</h5>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-3 text-center summary-kpi-card">
+                <span class="text-muted d-block small mb-1">Daily Avg.</span>
+                <h5 class="fw-bold mb-0 text-warning" id="summary-daily-average">₹0</h5>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-4">
+            <!-- Chart Column -->
+            <div class="col-12 col-md-5 d-flex flex-column align-items-center justify-content-center border-end-md">
+              <h6 class="fw-bold mb-3 w-100 text-center text-md-start" style="font-size: 0.85rem;"><i class="fas fa-chart-bar me-1"></i>Category Share</h6>
+              <div style="position: relative; height: 180px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                <canvas id="monthSummaryDoughnutChart" style="max-height: 180px; max-width: 100%;"></canvas>
+              </div>
+            </div>
+
+            <!-- Breakdown List Column -->
+            <div class="col-12 col-md-7">
+              <h6 class="fw-bold mb-3" style="font-size: 0.85rem;"><i class="fas fa-list-ol me-1"></i>Expenses by Category</h6>
+              <div id="summary-category-list" style="max-height: 200px; overflow-y: auto; padding-right: 8px;">
+                <!-- Categories populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Expenses Section -->
+          <div class="mt-4 pt-3 border-top" style="border-color: rgba(0, 0, 0, 0.08) !important;">
+            <h6 class="fw-bold mb-3" style="font-size: 0.85rem;"><i class="fas fa-star text-warning me-1"></i>Top 5 Highest Transactions</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-borderless align-middle mb-0" style="font-size: 0.78rem;">
+                <thead class="text-muted" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+                  <tr>
+                    <th style="padding: 6px 12px; font-weight: 600;">Date</th>
+                    <th style="padding: 6px 12px; font-weight: 600;">Item / Description</th>
+                    <th style="padding: 6px 12px; font-weight: 600;">Category</th>
+                    <th class="text-end" style="padding: 6px 12px; font-weight: 600;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="summary-top-expenses-list">
+                  <!-- Top 5 rows populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top-0" style="padding: 12px 24px; background: rgba(0, 0, 0, 0.02);">
+          <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal" style="font-size: 0.8rem;">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item List Summary Modal -->
+  <div class="modal fade" id="itemSummaryModal" tabindex="-1" aria-labelledby="itemSummaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content" style="border-radius: 16px; overflow: hidden; border: none; box-shadow: var(--shadow-xl);">
+        <div class="modal-header" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: white; padding: 16px 20px; border: none;">
+          <h5 class="modal-title fw-bold" id="itemSummaryModalLabel" style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-table-list"></i> <span id="item-summary-title">Month Item-wise Summary</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <!-- Modern KPI Grand Total Header -->
+          <div class="p-2 mb-3 rounded-3 text-center" style="background: rgba(234, 179, 8, 0.05); border: 1px solid rgba(234, 179, 8, 0.12);">
+            <span class="text-muted d-block small mb-1" style="font-weight: 600; font-size: 0.68rem; letter-spacing: 0.5px; text-transform: uppercase;">Grand Total Expenditure</span>
+            <h4 class="fw-bold mb-0" id="item-summary-grand-total" style="color: #ca8a04; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem;">₹0</h4>
+          </div>
+          
+          <h6 class="fw-bold mb-3" style="font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fas fa-list-check me-1" style="color: #eab308;"></i>Item List Breakdowns</span>
+            <span class="text-muted small" style="font-weight: normal; font-size: 0.72rem;">Share %</span>
+          </h6>
+          
+          <!-- Modern Scrollable List Container -->
+          <div id="item-summary-list" style="padding-right: 4px;">
+            <!-- Dynamic rows will go here -->
+          </div>
+        </div>
+        <div class="modal-footer border-top-0" style="padding: 12px 24px; background: rgba(0, 0, 0, 0.02);">
+          <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal" style="font-size: 0.8rem;">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modern Toast Notification -->
+  <div id="modernToast" class="modern-toast" style="display: none;">
+    <div class="modern-toast-content">
+      <div id="modernToastIconWrapper" class="modern-toast-icon-wrapper">
+        <span id="modernToastIcon"><i class="fas fa-info-circle"></i></span>
+      </div>
+      <div class="modern-toast-text">
+        <h5 id="modernToastTitle" class="modern-toast-title">Notification</h5>
+        <div id="modernToastBody" class="modern-toast-body" style="display: none;"></div>
+      </div>
+      <button type="button" class="modern-toast-close-btn" onclick="hideModernToast()">&times;</button>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <?!=include('Expense Tracker/Script'); ?>
+
+</body>
+
+</html>
