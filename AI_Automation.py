@@ -175,7 +175,7 @@ def get_netlify_site_url(project_dir):
 
 
 def quick_push(project_dir):
-    """Stage, commit, push, and offer interactive Netlify deploy."""
+    """Stage, commit, push, and automatically deploy to Netlify."""
     proj_name = os.path.basename(project_dir)
     branch, remote = get_git_info(project_dir)
 
@@ -217,21 +217,14 @@ def quick_push(project_dir):
 
     if success:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! All changes pushed to GitHub successfully.{RESET}")
-
-        print(f"\n{YELLOW}Deploy updated changes to Netlify now? [Y/n]: {RESET}", end="")
-        try:
-            choice = input().strip().lower()
-        except EOFError:
-            choice = "y"
-
-        if choice in ("", "y", "yes"):
-            deploy_netlify(project_dir)
+        print(f"\n{CYAN}🚀 Automatically deploying updated changes to Netlify...{RESET}")
+        deploy_netlify(project_dir, auto=True)
     else:
         print(f"\n{RED}❌ Push failed. Please check remote origin.{RESET}")
 
 
-def deploy_netlify(project_dir):
-    """Run Netlify interactive project selector (1, 2, 3...)."""
+def deploy_netlify(project_dir, auto=False):
+    """Run Netlify deployment tool."""
     helper_path = os.path.join(project_dir, "Helper_Netlify.js")
     if not os.path.exists(helper_path):
         helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "Helper_Netlify.js")
@@ -240,7 +233,10 @@ def deploy_netlify(project_dir):
         print(f"{RED}Error: Helper_Netlify.js not found.{RESET}")
         return
 
-    subprocess.run(["node", helper_path, project_dir])
+    cmd = ["node", helper_path, project_dir]
+    if auto:
+        cmd.append("--auto")
+    subprocess.run(cmd)
 
 
 def create_netlify_site(project_dir):
@@ -602,26 +598,24 @@ def main():
     auto_choice = sys.argv[1].strip() if len(sys.argv) > 1 else None
     menu_groups = {
         "1": ("GITHUB", [
-            (1, "Quick Push", "Stage, commit, and push project changes", "↑"),
+            (1, "Quick Push", "Stage, commit, push changes, and auto-deploy to Netlify", "↑"),
             (2, "Quick Pull", "Fetch and merge the latest remote changes", "↓"),
             (3, "Create Repository", "Create and publish a new GitHub repository", "+"),
             (4, "Clone Repository", "Clone a GitHub repository to your Desktop", "⇩"),
             (5, "Delete Repository", "Permanently delete a GitHub repository", "×"),
-            (6, "Make Repository Public", "Allow anyone to view the selected repository", "◎"),
-            (7, "Make Repository Private", "Restrict access to the selected repository", "◉"),
         ]),
         "2": ("NETLIFY", [
-            (8, "Deploy Site", "Deploy a project to Netlify", "▲"),
-            (9, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
-            (10, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
+            (6, "Deploy Site", "Deploy a project to Netlify", "▲"),
+            (7, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
+            (8, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
         ]),
         "3": ("GOOGLE APPS SCRIPT", [
-            (11, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
+            (9, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
         ]),
         "4": ("WORKSPACE", [
-            (12, "Project Status", "View recent commits and working-tree changes", "≡"),
-            (13, "Switch Project", "Choose another local Git project", "⇄"),
-            (14, "Exit", "Close the automation center", "×"),
+            (10, "Project Status", "View recent commits and working-tree changes", "≡"),
+            (11, "Switch Project", "Choose another local Git project", "⇄"),
+            (12, "Exit", "Close the automation center", "×"),
         ]),
     }
 
@@ -672,20 +666,16 @@ def main():
         elif choice == "5":
             delete_github(target_project)
         elif choice == "6":
-            change_github_visibility(target_project, "public")
-        elif choice == "7":
-            change_github_visibility(target_project, "private")
-        elif choice == "8":
             deploy_netlify(target_project)
-        elif choice == "9":
+        elif choice == "7":
             create_netlify_site(target_project)
-        elif choice == "10":
+        elif choice == "8":
             delete_netlify(target_project)
-        elif choice == "11":
+        elif choice == "9":
             deploy_apps_script(target_project)
-        elif choice == "12":
+        elif choice == "10":
             view_status(target_project)
-        elif choice == "13":
+        elif choice == "11":
             all_projs = list_desktop_projects()
             print(f"\n{BOLD}Available Desktop Projects:{RESET}")
             for i, p in enumerate(all_projs, start=1):
@@ -698,11 +688,11 @@ def main():
                     print(f"{GREEN}Switched to: {os.path.basename(target_project)}{RESET}")
             except (EOFError, KeyboardInterrupt):
                 pass
-        elif choice in ("14", "q", "exit"):
+        elif choice in ("12", "q", "exit"):
             print(f"\n{GREEN}Goodbye! 👋{RESET}\n")
             break
         else:
-            print(f"{RED}Invalid selection. Please choose 1 to 14.{RESET}")
+            print(f"{RED}Invalid selection. Please choose 1 to 12.{RESET}")
 
         try:
             input(f"\n{DIM}Press [ENTER] to return to menu...{RESET}")
