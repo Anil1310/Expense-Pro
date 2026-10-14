@@ -5405,27 +5405,6 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             background: #1e293b !important;
         }
 
-        #dashboard-page .table-responsive {
-            display: block !important;
-            width: 100% !important;
-            height: auto !important;
-            min-height: auto !important;
-            max-height: calc(100vh - 165px) !important;
-            overflow-x: auto !important;
-            overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch;
-            border-radius: 0 !important;
-            background: #ffffff !important;
-            padding-bottom: 0 !important;
-            box-shadow: none !important;
-        }
-
-        [data-theme="dark"] #dashboard-page .table-responsive {
-            background: #1e293b !important;
-            box-shadow: none !important;
-        }
-
-        /* ── Mobile Table Enhancements (Styled Like Laptop View) ── */
         #dashboard-page .table-responsive,
         #reports-page .table-responsive {
             display: block !important;
@@ -5433,9 +5412,12 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             height: auto !important;
             min-height: auto !important;
             max-height: calc(100vh - 165px) !important;
+            max-height: calc(100dvh - 165px) !important;
             overflow-x: auto !important;
             overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch !important;
+            touch-action: pan-x pan-y !important;
+            overscroll-behavior-y: contain;
             border-radius: 12px !important;
             background: #ffffff !important;
             padding-bottom: 0 !important;
@@ -5445,7 +5427,9 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
 
         #reports-page .table-responsive {
             min-height: calc(100vh - 365px) !important;
+            min-height: calc(100dvh - 365px) !important;
             max-height: calc(100vh - 365px) !important;
+            max-height: calc(100dvh - 365px) !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-responsive,
@@ -7499,8 +7483,207 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: 100dvh !important;
             overflow: visible !important;
         }
+    /* ── PDF Preview Modal (Base Desktop & Laptop) ── */
+    #pdfPreviewModal .modal-dialog {
+        max-width: 95%;
+        width: 95%;
+        height: 92vh;
+        margin: 1.5rem auto;
     }
 
+    #pdfPreviewModal .modal-content {
+        height: 100%;
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    }
+
+    #pdfPreviewModal .modal-header {
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: #ffffff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+        min-height: 56px;
+    }
+
+    #pdfPreviewModal .pdf-modal-title-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    #pdfPreviewModal .pdf-modal-back-btn {
+        background: rgba(255, 255, 255, 0.12);
+        border: none;
+        color: #ffffff;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    #pdfPreviewModal .pdf-modal-back-btn:active {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(0.92);
+    }
+
+    #pdfPreviewModal .modal-title {
+        font-weight: 800;
+        font-size: 1.05rem;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #pdfPreviewModal .pdf-month-badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: rgba(59, 130, 246, 0.25);
+        color: #93c5fd;
+        border: 1px solid rgba(147, 197, 253, 0.3);
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-left: 8px;
+    }
+
+    #pdfPreviewModal .pdf-modal-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    #pdfPreviewModal .pdf-print-btn {
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        background-color: #3b82f6;
+        border: none;
+        font-size: 0.85rem;
+        padding: 7px 16px;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    #pdfPreviewModal .pdf-print-btn:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+    }
+
+    #pdfPreviewModal .modal-body {
+        flex: 1 1 auto;
+        height: calc(100% - 56px);
+        overflow: hidden;
+        background: #f1f5f9;
+        position: relative;
+        padding: 0 !important;
+    }
+
+    #pdfPreviewModal #pdfPreviewIframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+        background: #ffffff;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 768px) {
+        /* Fullscreen Mobile View for PDF Modal (Android App optimized) */
+        #pdfPreviewModal {
+            padding: 0 !important;
+            overflow: hidden !important;
+            inset: 0 !important;
+        }
+
+        #pdfPreviewModal .modal-dialog {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            transform: none !important;
+        }
+
+        #pdfPreviewModal .modal-content {
+            width: 100vw !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            border: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+        }
+
+        #pdfPreviewModal .modal-header {
+            border-radius: 0 !important;
+            padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 8px 14px !important;
+            min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
+            background: linear-gradient(135deg, #090d16, #111827) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+            z-index: 10 !important;
+        }
+
+        #pdfPreviewModal .modal-title {
+            font-size: 0.95rem !important;
+        }
+
+        #pdfPreviewModal .pdf-month-badge {
+            font-size: 0.68rem !important;
+            padding: 2px 6px !important;
+            margin-left: 6px !important;
+        }
+
+        #pdfPreviewModal .pdf-print-btn {
+            font-size: 0.78rem !important;
+            padding: 6px 12px !important;
+        }
+
+        #pdfPreviewModal .modal-body {
+            flex: 1 1 100% !important;
+            height: auto !important;
+            width: 100vw !important;
+            overflow: hidden !important;
+            background: #ffffff !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        }
+
+        #pdfPreviewModal #pdfPreviewIframe {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+    }
 </style>
 
   <script>
@@ -8825,18 +9008,29 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
     </div>
   </div>
   <!-- PDF Preview Modal -->
-  <div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 95%; height: 95%; margin: 1.75rem auto;">
-      <div class="modal-content" style="height: 100%; background: #ffffff; border-radius: 14px; overflow: hidden; border: none;">
-        <div class="modal-header border-bottom" style="padding: 15px 20px; background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;">
-          <h5 class="modal-title fw-bold" id="pdfPreviewModalLabel" style="font-weight:800; font-size:1.1rem;"><i class="fas fa-file-pdf text-danger me-2"></i>Statement Print Preview</h5>
-          <div class="d-flex align-items-center" style="gap: 12px;">
-            <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="printPreviewPDF()" style="box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); background-color: #3b82f6; border: none;"><i class="fas fa-print me-1"></i>Print / Save PDF</button>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal fade pdf-preview-modal" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="pdf-modal-title-group">
+            <button type="button" class="pdf-modal-back-btn d-md-none" data-bs-dismiss="modal" aria-label="Back">
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <h5 class="modal-title" id="pdfPreviewModalLabel">
+              <i class="fas fa-file-pdf text-danger me-2"></i>
+              <span class="pdf-title-text">Statement Preview</span>
+              <span id="pdfPreviewMonthBadge" class="pdf-month-badge"></span>
+            </h5>
+          </div>
+          <div class="pdf-modal-actions">
+            <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold pdf-print-btn" onclick="printPreviewPDF()">
+              <i class="fas fa-print me-1"></i><span class="pdf-btn-label">Print / Save PDF</span>
+            </button>
+            <button type="button" class="btn-close btn-close-white d-none d-md-inline-block" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
         </div>
-        <div class="modal-body p-0" style="height: calc(100% - 65px); overflow: hidden; background: #e2e8f0;">
-          <iframe id="pdfPreviewIframe" style="width: 100%; height: 100%; border: none;"></iframe>
+        <div class="modal-body p-0">
+          <iframe id="pdfPreviewIframe" title="PDF Statement Preview"></iframe>
         </div>
       </div>
     </div>
@@ -10431,13 +10625,18 @@ Expense Tracker Pro: 2026 JavaScript Code
     }
 
     /* ── Mobile Infinite Scroll: Dashboard ─────────────────────────────── */
+    let isDashboardBatchLoading = false;
+
     function appendDashboardBatch(tableBody) {
+        if (!tableBody || isDashboardBatchLoading) return;
         const data = mobileDashboardAllData;
         const start = mobileDashboardLoadedCount;
         const end = Math.min(start + MOBILE_BATCH_SIZE, data.length);
         if (start >= data.length) return;
 
-        // Remove existing se nel if any
+        isDashboardBatchLoading = true;
+
+        // Remove existing sentinel if any
         const oldSentinel = tableBody.querySelector('.scroll-sentinel');
         if (oldSentinel) oldSentinel.remove();
 
@@ -10486,6 +10685,7 @@ Expense Tracker Pro: 2026 JavaScript Code
             tableBody.appendChild(tr);
         }
         mobileDashboardLoadedCount = end;
+        isDashboardBatchLoading = false;
 
         // If more records exist, add a sentinel row to trigger next load
         if (end < data.length) {
@@ -10498,18 +10698,32 @@ Expense Tracker Pro: 2026 JavaScript Code
                 </td>`;
             tableBody.appendChild(sentinel);
 
-            // Observe the sentinel
+            // Observe the sentinel using viewport intersection with generous rootMargin
             if (mobileDashboardObserver) mobileDashboardObserver.disconnect();
             mobileDashboardObserver = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting) {
+                if (entries[0] && entries[0].isIntersecting) {
                     mobileDashboardObserver.disconnect();
                     appendDashboardBatch(tableBody);
                 }
             }, {
-                root: tableBody.closest('.table-responsive') || null,
-                threshold: 0.1
+                root: null,
+                rootMargin: '250px 0px 250px 0px',
+                threshold: 0
             });
-            mobileDashboardObserer.observe(sentinel);
+            mobileDashboardObserver.observe(sentinel);
+
+            // Attach scroll listener fallback to container and window
+            const container = tableBody.closest('.table-responsive');
+            if (container && !container._hasMobileScrollListener) {
+                container._hasMobileScrollListener = true;
+                container.addEventListener('scroll', () => {
+                    if (container.scrollHeight - container.scrollTop - container.clientHeight < 250) {
+                        if (mobileDashboardLoadedCount < mobileDashboardAllData.length && !isDashboardBatchLoading) {
+                            appendDashboardBatch(tableBody);
+                        }
+                    }
+                }, { passive: true });
+            }
         } else {
             // All loaded — show total count footer
             const footer = document.createElement('tr');
@@ -10524,11 +10738,16 @@ Expense Tracker Pro: 2026 JavaScript Code
     }
 
     /* ── Mobile Infinite Scroll: Reports ───────────────────────────────── */
+    let isReportsBatchLoading = false;
+
     function appendReportsBatch(tableBody) {
+        if (!tableBody || isReportsBatchLoading) return;
         const data = mobileReportsAllData;
         const start = mobileReportsLoadedCount;
         const end = Math.min(start + MOBILE_BATCH_SIZE, data.length);
         if (start >= data.length) return;
+
+        isReportsBatchLoading = true;
 
         const oldSentinel = tableBody.querySelector('.scroll-sentinel');
         if (oldSentinel) oldSentinel.remove();
@@ -10583,6 +10802,7 @@ Expense Tracker Pro: 2026 JavaScript Code
             tableBody.appendChild(tr);
         }
         mobileReportsLoadedCount = end;
+        isReportsBatchLoading = false;
 
         if (end < data.length) {
             const sentinel = document.createElement('tr');
@@ -10596,18 +10816,31 @@ Expense Tracker Pro: 2026 JavaScript Code
 
             if (mobileReportsObserver) mobileReportsObserver.disconnect();
             mobileReportsObserver = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting) {
+                if (entries[0] && entries[0].isIntersecting) {
                     mobileReportsObserver.disconnect();
                     appendReportsBatch(tableBody);
                 }
             }, {
-                root: tableBody.closest('.table-responsive') || null,
-                threshold: 0.1
+                root: null,
+                rootMargin: '250px 0px 250px 0px',
+                threshold: 0
             });
-            mobileReportsObserver.observe(entinel);
+            mobileReportsObserver.observe(sentinel);
+
+            const container = tableBody.closest('.table-responsive');
+            if (container && !container._hasMobileReportsScrollListener) {
+                container._hasMobileReportsScrollListener = true;
+                container.addEventListener('scroll', () => {
+                    if (container.scrollHeight - container.scrollTop - container.clientHeight < 250) {
+                        if (mobileReportsLoadedCount < mobileReportsAllData.length && !isReportsBatchLoading) {
+                            appendReportsBatch(tableBody);
+                        }
+                    }
+                }, { passive: true });
+            }
         } else {
             const footer = document.createElement('tr');
-            foote.className = 'scroll-sentinel';
+            footer.className = 'scroll-sentinel';
             footer.innerHTML = `
                 <td colspan="8" class="scroll-sentinel-cell scroll-end">
                     <i class="fas fa-check-circle" style="color:var(--success-color);"></i>
@@ -12814,15 +13047,30 @@ Expense Tracker Pro: 2026 JavaScript Code
             html: `<!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>Expense Report – ${month} ${year}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-  @page {
-    size: A4 portrait;
-    margin: 10mm 15mm;
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  * { box-sizing: border-box; }
+  body { 
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    background: #f8fafc; 
+    color: #1e293b; 
+    font-size: 11px; 
+    margin: 0; 
+    padding: 16px 14px; 
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
   }
-  body { font-family: 'Inter', Arial, sans-serif; background: #fff; color: #1e293b; font-size: 10px; margin: 0; padding: 0; }
-  .page { padding: 0; max-width: 100%; margin: 0; }
+  .page { 
+    padding: 24px; 
+    max-width: 1100px; 
+    margin: 0 auto; 
+    background: #ffffff; 
+    border-radius: 14px; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06); 
+  }
   
   .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid #0f172a; margin-bottom: 25px; }
   .brand { font-size: 1.6rem; font-weight: 800; color: #0f172a; letter-spacing: -1px; }
@@ -12841,12 +13089,22 @@ Expense Tracker Pro: 2026 JavaScript Code
   .details-column { flex: 68; min-width: 0; }
   .summary-column { flex: 32; min-width: 0; }
   
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; }
+  .table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+    background: #ffffff;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 0; table-layout: auto; }
   thead th { background: #0f172a; color: #fff; padding: 10px 12px; text-align: left; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
   tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.85rem; }
   tbody tr:nth-child(even) { background: #f8fafc; }
   
-  .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; }
+  .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 0; table-layout: auto; }
   .summary-table tbody td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
   .summary-table tbody tr:nth-child(even) { background: #f8fafc; }
   
@@ -12859,11 +13117,41 @@ Expense Tracker Pro: 2026 JavaScript Code
   .total-value { font-size: 1.05rem; color: #0f172a; padding: 12px !important; }
 
   .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; }
+
+  @media screen and (max-width: 768px) {
+    body { padding: 10px 8px; font-size: 11px; background: #f1f5f9; }
+    .page { padding: 14px 10px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .report-header { flex-direction: column; align-items: flex-start; gap: 12px; padding-bottom: 14px; margin-bottom: 18px; }
+    .meta-info { text-align: left; width: 100%; }
+    .stats-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
+    .stat-box { padding: 10px 4px; border-radius: 10px; }
+    .stat-label { font-size: 0.65rem; margin-bottom: 4px; }
+    .stat-value { font-size: 1.05rem; }
+    .report-body { flex-direction: column; gap: 20px; }
+    .details-column, .summary-column { width: 100%; flex: none; }
+    .table-responsive-wrapper table { min-width: 520px; }
+    .summary-column .table-responsive-wrapper table { min-width: 260px; }
+    .footer { flex-direction: column; gap: 6px; align-items: flex-start; }
+  }
   
   @media print { 
-    body { -webkit-print-color-adjust: exact; } 
-    .page { padding: 0; } 
-    .report-body { display: flex !important; flex-direction: row !important; }
+    @page {
+      size: A4 portrait;
+      margin: 10mm 15mm;
+    }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff !important; padding: 0 !important; font-size: 10px !important; } 
+    .page { padding: 0 !important; box-shadow: none !important; border-radius: 0 !important; max-width: 100% !important; } 
+    .report-header { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; padding-bottom: 20px !important; margin-bottom: 25px !important; border-bottom: 3px solid #0f172a !important; }
+    .meta-info { text-align: right !important; width: auto !important; }
+    .stats-strip { display: flex !important; gap: 16px !important; margin-bottom: 25px !important; }
+    .stat-box { flex: 1 !important; padding: 15px !important; }
+    .stat-value { font-size: 1.4rem !important; }
+    .report-body { display: flex !important; flex-direction: row !important; gap: 24px !important; align-items: flex-start !important; }
+    .details-column { flex: 68 !important; width: auto !important; }
+    .summary-column { flex: 32 !important; width: auto !important; }
+    .table-responsive-wrapper { border: none !important; border-radius: 0 !important; overflow: visible !important; margin-bottom: 20px !important; }
+    .table-responsive-wrapper table { min-width: unset !important; }
+    .footer { display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
   }
 </style>
 </head>
@@ -12889,34 +13177,38 @@ Expense Tracker Pro: 2026 JavaScript Code
 
   <div class="report-body">
     <div class="details-column">
-      <table>
-        <thead><tr><th>S.N.</th><th>Unique ID</th><th>Date</th><th>Category</th><th>Amount</th><th>Remark</th></tr></thead>
-        <tbody>
-          ${tableRows}
-          <tr class="total-row">
-            <td colspan="4" class="total-label">Statement Grand Total</td>
-            <td class="total-value" colspan="2">${grandTotalFmt}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-responsive-wrapper">
+        <table>
+          <thead><tr><th>S.N.</th><th>Unique ID</th><th>Date</th><th>Category</th><th>Amount</th><th>Remark</th></tr></thead>
+          <tbody>
+            ${tableRows}
+            <tr class="total-row">
+              <td colspan="4" class="total-label">Statement Grand Total</td>
+              <td class="total-value" colspan="2">${grandTotalFmt}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     
     <div class="summary-column">
-      <table class="summary-table" style="border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <thead>
-          <tr style="background-color: #7b9e3a; color: white;">
-            <th style="padding: 8px 10px; font-weight: 700; font-size: 0.75rem; background-color: #7b9e3a; color: white; border: none; white-space: nowrap;">Item List</th>
-            <th style="padding: 8px 10px; font-weight: 700; font-size: 0.75rem; text-align: right; background-color: #7b9e3a; color: white; border: none; white-space: nowrap; width: 90px;">Sum of Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${summaryTableRows}
-          <tr class="total-row" style="background: #f1f5f9 !important; font-weight: 800; border-top: 2px solid #7b9e3a;">
-            <td style="padding: 8px 10px; font-size: 0.8rem; color: #0f172a;">Grand Total</td>
-            <td style="padding: 8px 10px; font-size: 0.85rem; text-align: right; color: #0f172a;">${grandTotalSumFmt}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-responsive-wrapper">
+        <table class="summary-table" style="border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <thead>
+            <tr style="background-color: #7b9e3a; color: white;">
+              <th style="padding: 8px 10px; font-weight: 700; font-size: 0.75rem; background-color: #7b9e3a; color: white; border: none; white-space: nowrap;">Item List</th>
+              <th style="padding: 8px 10px; font-weight: 700; font-size: 0.75rem; text-align: right; background-color: #7b9e3a; color: white; border: none; white-space: nowrap; width: 90px;">Sum of Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${summaryTableRows}
+            <tr class="total-row" style="background: #f1f5f9 !important; font-weight: 800; border-top: 2px solid #7b9e3a;">
+              <td style="padding: 8px 10px; font-size: 0.8rem; color: #0f172a;">Grand Total</td>
+              <td style="padding: 8px 10px; font-size: 0.85rem; text-align: right; color: #0f172a;">${grandTotalSumFmt}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -12940,6 +13232,11 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         const modalEl = document.getElementById('pdfPreviewModal');
         const iframe = document.getElementById('pdfPreviewIframe');
+        const badgeEl = document.getElementById('pdfPreviewMonthBadge');
+
+        if (badgeEl) {
+            badgeEl.textContent = `${month} ${year}`;
+        }
 
         if (modalEl && iframe) {
             // Write the generated HTML into the iframe
@@ -12968,13 +13265,31 @@ Expense Tracker Pro: 2026 JavaScript Code
 
     function printPreviewPDF() {
         const iframe = document.getElementById('pdfPreviewIframe');
-        if (iframe) {
+        if (iframe && iframe.contentWindow) {
             try {
                 iframe.contentWindow.focus();
                 iframe.contentWindow.print();
             } catch (e) {
-                console.error("Print failed:", e);
-                alert("Print failed: " + e.message);
+                console.warn("Direct iframe print failed, trying print fallback:", e);
+                try {
+                    const htmlContent = iframe.contentDocument ? iframe.contentDocument.documentElement.outerHTML : '';
+                    if (htmlContent) {
+                        const blob = new Blob([htmlContent], { type: 'text/html' });
+                        const blobUrl = URL.createObjectURL(blob);
+                        const win = window.open(blobUrl, '_blank');
+                        if (win) {
+                            win.onload = () => {
+                                win.focus();
+                                win.print();
+                            };
+                        } else {
+                            window.location.href = blobUrl;
+                        }
+                    }
+                } catch (err) {
+                    console.error("Print fallback failed:", err);
+                    alert("Print failed: " + e.message);
+                }
             }
         }
     }
