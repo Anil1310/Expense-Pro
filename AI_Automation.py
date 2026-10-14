@@ -10,6 +10,7 @@ import subprocess
 import datetime
 import shutil
 import json
+import re
 from urllib.parse import urlencode, urlparse
 
 # Color Codes
@@ -247,6 +248,88 @@ def open_vercel_site(project_dir):
         subprocess.run(["open", url])
     except Exception as e:
         print(f"{RED}Could not open browser: {e}{RESET}")
+
+
+def delete_vercel_project(project_dir):
+    """Interactive tool to list and delete Vercel projects."""
+    print(f"\n{MAGENTA}================================================================{RESET}")
+    print(f"{RED}{BOLD}       🗑️  DELETE VERCEL PROJECT (PERMANENT REMOVAL)            {RESET}")
+    print(f"{MAGENTA}================================================================{RESET}\n")
+
+    print(f"{CYAN}Fetching your Vercel projects...{RESET}")
+    proc = subprocess.run(["npx", "-y", "vercel", "project", "ls"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+    projects = []
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        m = re.match(r"^([a-z0-9\-_.]+)\s+(https://\S+)", line)
+        if m and m.group(1).lower() not in ("project", "name"):
+            projects.append({"name": m.group(1), "url": m.group(2)})
+
+    if not projects:
+        print(f"{YELLOW}No Vercel projects found on your account.{RESET}\n")
+        return
+
+    current_proj_name = get_vercel_project_name(project_dir)
+
+    print(f"{BOLD}Select a Vercel project to permanently delete:{RESET}\n")
+    for idx, p in enumerate(projects, start=1):
+        is_curr = f" {CYAN}{BOLD}(📍 Linked to local folder){RESET}" if p["name"] == current_proj_name else ""
+        print(f"  {YELLOW}[{idx}]{RESET} {BOLD}{p['name']}{RESET} {DIM}➔ {p['url']}{RESET}{is_curr}")
+
+    print(f"\n  {GREEN}[c]{RESET} Cancel / Return\n")
+
+    try:
+        ans = input(f"{YELLOW}{BOLD}Enter number of project to DELETE (1-{len(projects)}, or 'c'): {RESET}").strip()
+    except (EOFError, KeyboardInterrupt):
+        return
+
+    if ans.lower() in ("c", "cancel", "0", "q", ""):
+        print(f"\n{GREEN}Exited Vercel delete tool.{RESET}\n")
+        return
+
+    chosen = None
+    if ans.isdigit() and 1 <= int(ans) <= len(projects):
+        chosen = projects[int(ans) - 1]
+    else:
+        for p in projects:
+            if p["name"].lower() == ans.lower():
+                chosen = p
+                break
+
+    if not chosen:
+        print(f"{RED}Invalid selection.{RESET}")
+        return
+
+    print(f"\n{RED}{BOLD}⚠️  WARNING: You are about to PERMANENTLY delete:{RESET}")
+    print(f"  Project: {BOLD}{chosen['name']}{RESET}")
+    print(f"  URL:     {chosen['url']}\n")
+
+    try:
+        confirm = input(f"{YELLOW}{BOLD}Type 'yes' or '{chosen['name']}' to confirm deletion: {RESET}").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print(f"\n{YELLOW}Deletion cancelled.{RESET}\n")
+        return
+
+    if confirm not in ("yes", "y", chosen["name"].lower()):
+        print(f"\n{YELLOW}Deletion cancelled for {chosen['name']}.{RESET}\n")
+        return
+
+    print(f"\n{CYAN}Deleting '{chosen['name']}' from Vercel...{RESET}")
+    del_proc = subprocess.run(["npx", "-y", "vercel", "project", "rm", chosen["name"]], input="y\n", text=True)
+
+    if del_proc.returncode == 0:
+        print(f"\n{GREEN}✅ Project '{chosen['name']}' has been completely removed from Vercel.{RESET}\n")
+        if chosen["name"] == current_proj_name:
+            cfg = os.path.join(project_dir, ".vercel-site.json")
+            if os.path.isfile(cfg):
+                try:
+                    os.remove(cfg)
+                    print(f"{DIM}Unlinked local .vercel-site.json.{RESET}\n")
+                except Exception:
+                    pass
+    else:
+        print(f"\n{RED}Failed to delete project '{chosen['name']}'.{RESET}\n")
 
 
 def quick_push(project_dir):
@@ -700,19 +783,20 @@ def main():
         "2": ("VERCEL", [
             (6, "Deploy to Vercel", "Deploy production build to Vercel", "▲"),
             (7, "Open Live Vercel Site", "Open live Vercel URL in web browser", "↗"),
+            (8, "Delete Vercel Project", "Permanently delete a Vercel project", "×"),
         ]),
         "3": ("NETLIFY", [
-            (8, "Deploy Site", "Deploy a project to Netlify", "▲"),
-            (9, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
-            (10, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
+            (9, "Deploy Site", "Deploy a project to Netlify", "▲"),
+            (10, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
+            (11, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
         ]),
         "4": ("GOOGLE APPS SCRIPT", [
-            (11, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
+            (12, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
         ]),
         "5": ("WORKSPACE", [
-            (12, "Project Status", "View recent commits and live deployment URLs", "≡"),
-            (13, "Switch Project", "Choose another local Git project", "⇄"),
-            (14, "Exit", "Close the automation center", "×"),
+            (13, "Project Status", "View recent commits and live deployment URLs", "≡"),
+            (14, "Switch Project", "Choose another local Git project", "⇄"),
+            (15, "Exit", "Close the automation center", "×"),
         ]),
     }
 
@@ -768,16 +852,18 @@ def main():
         elif choice == "7":
             open_vercel_site(target_project)
         elif choice == "8":
-            deploy_netlify(target_project)
+            delete_vercel_project(target_project)
         elif choice == "9":
-            create_netlify_site(target_project)
+            deploy_netlify(target_project)
         elif choice == "10":
-            delete_netlify(target_project)
+            create_netlify_site(target_project)
         elif choice == "11":
-            deploy_apps_script(target_project)
+            delete_netlify(target_project)
         elif choice == "12":
-            view_status(target_project)
+            deploy_apps_script(target_project)
         elif choice == "13":
+            view_status(target_project)
+        elif choice == "14":
             all_projs = list_desktop_projects()
             print(f"\n{BOLD}Available Desktop Projects:{RESET}")
             for i, p in enumerate(all_projs, start=1):
@@ -790,7 +876,7 @@ def main():
                     print(f"{GREEN}Switched to: {os.path.basename(target_project)}{RESET}")
             except (EOFError, KeyboardInterrupt):
                 pass
-        elif choice in ("14", "q", "exit"):
+        elif choice in ("15", "q", "exit"):
             print(f"\n{GREEN}Goodbye! 👋{RESET}\n")
             break
         else:
