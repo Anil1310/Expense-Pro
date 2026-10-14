@@ -1,5 +1,4 @@
 import { defineConfig, loadEnv } from "vite";
-import react from "@vitejs/plugin-react";
 
 function appsScriptDevProxy(scriptUrl) {
   return {
@@ -20,7 +19,8 @@ function appsScriptDevProxy(scriptUrl) {
           const upstream = await fetch(scriptUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: Buffer.concat(chunks)
+            body: Buffer.concat(chunks),
+            redirect: "follow"
           });
           const body = await upstream.text();
           response.writeHead(upstream.ok ? 200 : 502, {
@@ -49,10 +49,9 @@ export default defineConfig(({ mode }) => {
   const scriptUrl = env.APPS_SCRIPT_WEB_APP_URL || env.VITE_APPS_SCRIPT_WEB_APP_URL;
 
   return {
-    plugins: [react(), appsScriptDevProxy(scriptUrl)],
-    build: {
-      outDir: "dist",
-      emptyOutDir: true
+    plugins: [appsScriptDevProxy(scriptUrl)],
+    server: {
+      port: 5173
     }
   };
 });
