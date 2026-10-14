@@ -273,22 +273,23 @@ def quick_push(project_dir):
 
     if success:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! All changes pushed to GitHub successfully.{RESET}")
-        print(f"\n{YELLOW}Deploy updated changes now?{RESET}")
-        print(f"  {GREEN}[1]{RESET} ▲ Deploy to Vercel")
-        print(f"  {GREEN}[2]{RESET} 🌐 Deploy to Netlify")
-        print(f"  {GREEN}[3]{RESET} 🚀 Deploy to Both (Vercel & Netlify)")
-        print(f"  {DIM}[n] Skip deployment{RESET}")
-        try:
-            deploy_choice = input(f"{YELLOW}Choose [1-3, or Enter for Vercel]: {RESET}").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            deploy_choice = "1"
 
-        if deploy_choice in ("", "1", "v", "vercel"):
+        print(f"\n{YELLOW}Deploy updated changes to Vercel now? [Y/n]: {RESET}", end="")
+        try:
+            choice_vercel = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            choice_vercel = "y"
+
+        if choice_vercel in ("", "y", "yes"):
             deploy_vercel(project_dir, auto=True)
-        elif deploy_choice in ("2", "netlify"):
-            deploy_netlify(project_dir, auto=True)
-        elif deploy_choice in ("3", "both"):
-            deploy_vercel(project_dir, auto=True)
+
+        print(f"\n{YELLOW}Deploy updated changes to Netlify now? [y/N]: {RESET}", end="")
+        try:
+            choice_netlify = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            choice_netlify = "n"
+
+        if choice_netlify in ("y", "yes"):
             deploy_netlify(project_dir, auto=True)
     else:
         print(f"\n{RED}❌ Push failed. Please check remote origin.{RESET}")
