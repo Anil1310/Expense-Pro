@@ -7,7 +7,7 @@ function appsScriptDevProxy(scriptUrl) {
     configureServer(server) {
       if (!scriptUrl) return;
 
-      server.middlewares.use("/.netlify/functions/apps-script", async (request, response) => {
+      const proxyHandler = async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { Allow: "POST", "Content-Type": "application/json" });
           response.end(JSON.stringify({ success: false, error: "Method not allowed." }));
@@ -36,7 +36,10 @@ function appsScriptDevProxy(scriptUrl) {
             error: "Could not reach the Apps Script backend."
           }));
         }
-      });
+      };
+
+      server.middlewares.use("/api/apps-script", proxyHandler);
+      server.middlewares.use("/.netlify/functions/apps-script", proxyHandler);
     }
   };
 }

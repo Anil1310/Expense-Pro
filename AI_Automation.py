@@ -87,7 +87,7 @@ def print_banner(project_path):
     branch, remote = get_git_info(project_path) if project_path else ("unknown", None)
     border = "━" * 74
     print(f"\n{CYAN}{border}{RESET}")
-    print(f"{CYAN}  {BOLD}DEVOPS CONTROL CENTER{RESET}{CYAN}  /  GitHub · Netlify · Apps Script{RESET}")
+    print(f"{CYAN}  {BOLD}DEVOPS CONTROL CENTER{RESET}{CYAN}  /  GitHub · Vercel · Netlify · Apps Script{RESET}")
     print(f"{CYAN}{border}{RESET}")
     print(f"  {DIM}PROJECT{RESET}  {BOLD}{proj_name}{RESET}  {DIM}·  BRANCH{RESET}  {GREEN}{branch}{RESET}")
     print(f"  {DIM}PATH{RESET}     {project_path}")
@@ -174,8 +174,64 @@ def get_netlify_site_url(project_dir):
     return f"{site_url.rstrip('/')}/"
 
 
+def get_vercel_site_url(project_dir):
+    """Read the configured Vercel site URL for a project."""
+    config_path = os.path.join(project_dir, ".vercel-site.json")
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                data = json.load(f)
+                url = data.get("siteUrl")
+                if url:
+                    return f"{url.rstrip('/')}/"
+        except Exception:
+            pass
+
+    if "expense" in os.path.basename(project_dir).lower():
+        return "https://app-tcrn.vercel.app/"
+    return None
+
+
+def deploy_vercel(project_dir, auto=False):
+    """Deploy project to Vercel (Production)."""
+    proj_name = os.path.basename(project_dir)
+    print(f"\n{CYAN}--------------------------------------------------------{RESET}")
+    print(f"▲ {BOLD}Deploying to Vercel (Production):{RESET} {GREEN}{proj_name}{RESET}")
+    print(f"{CYAN}--------------------------------------------------------{RESET}\n")
+
+    vercel_bin = shutil.which("vercel")
+    cmd = [vercel_bin, "--prod"] if vercel_bin else ["npx", "-y", "vercel", "--prod"]
+    if auto:
+        cmd.append("--yes")
+
+    print(f"{CYAN}Running: {' '.join(cmd)}...{RESET}")
+    proc = subprocess.run(cmd, cwd=project_dir)
+
+    live_url = get_vercel_site_url(project_dir) or "https://app-tcrn.vercel.app/"
+    if proc.returncode == 0:
+        print(f"\n{GREEN}{BOLD}🎉 SUCCESS! Deployed to Vercel successfully.{RESET}")
+        print(f"👉 {BOLD}{CYAN}{live_url}{RESET}\n")
+        try:
+            subprocess.run(["open", live_url])
+        except Exception:
+            pass
+    else:
+        print(f"\n{YELLOW}If deployment requires authentication, run: npx vercel login{RESET}")
+        print(f"Or view project at: {CYAN}{live_url}{RESET}")
+
+
+def open_vercel_site(project_dir):
+    """Open active Vercel site in browser."""
+    url = get_vercel_site_url(project_dir) or "https://app-tcrn.vercel.app/"
+    print(f"\n{CYAN}Opening Vercel site in browser:{RESET} {GREEN}{url}{RESET}")
+    try:
+        subprocess.run(["open", url])
+    except Exception as e:
+        print(f"{RED}Could not open browser: {e}{RESET}")
+
+
 def quick_push(project_dir):
-    """Stage, commit, push, and automatically deploy to Netlify."""
+    """Stage, commit, push, and offer automated deployment."""
     proj_name = os.path.basename(project_dir)
     branch, remote = get_git_info(project_dir)
 
@@ -217,8 +273,23 @@ def quick_push(project_dir):
 
     if success:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! All changes pushed to GitHub successfully.{RESET}")
-        print(f"\n{CYAN}🚀 Automatically deploying updated changes to Netlify...{RESET}")
-        deploy_netlify(project_dir, auto=True)
+        print(f"\n{YELLOW}Deploy updated changes now?{RESET}")
+        print(f"  {GREEN}[1]{RESET} ▲ Deploy to Vercel")
+        print(f"  {GREEN}[2]{RESET} 🌐 Deploy to Netlify")
+        print(f"  {GREEN}[3]{RESET} 🚀 Deploy to Both (Vercel & Netlify)")
+        print(f"  {DIM}[n] Skip deployment{RESET}")
+        try:
+            deploy_choice = input(f"{YELLOW}Choose [1-3, or Enter for Vercel]: {RESET}").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            deploy_choice = "1"
+
+        if deploy_choice in ("", "1", "v", "vercel"):
+            deploy_vercel(project_dir, auto=True)
+        elif deploy_choice in ("2", "netlify"):
+            deploy_netlify(project_dir, auto=True)
+        elif deploy_choice in ("3", "both"):
+            deploy_vercel(project_dir, auto=True)
+            deploy_netlify(project_dir, auto=True)
     else:
         print(f"\n{RED}❌ Push failed. Please check remote origin.{RESET}")
 
@@ -572,9 +643,10 @@ def clone_repository():
 
 
 def view_status(project_dir):
-    """Display project and Netlify details."""
+    """Display project and deployment details."""
     proj_name = os.path.basename(project_dir)
     branch, remote = get_git_info(project_dir)
+    vercel_site_url = get_vercel_site_url(project_dir)
     netlify_site_url = get_netlify_site_url(project_dir)
 
     print(f"\n{CYAN}--------------------------------------------------------{RESET}")
@@ -584,7 +656,8 @@ def view_status(project_dir):
     print(f"  {BOLD}Directory:{RESET}        {project_dir}")
     print(f"  {BOLD}GitHub Remote:{RESET}    {remote or 'Not configured'}")
     print(f"  {BOLD}Current Branch:{RESET}   {branch}")
-    print(f"  {BOLD}Primary Live URL:{RESET} {CYAN}{netlify_site_url or 'Not configured'}{RESET}\n")
+    print(f"  {BOLD}Vercel Live URL:{RESET}  {CYAN}{vercel_site_url or 'Not configured'}{RESET}")
+    print(f"  {BOLD}Netlify Live URL:{RESET} {CYAN}{netlify_site_url or 'Not configured'}{RESET}\n")
 
     print(f"{BOLD}Recent Commits:{RESET}")
     subprocess.run('git log -n 4 --format="  • %h | %s (%cr)"', shell=True, cwd=project_dir)
@@ -598,24 +671,28 @@ def main():
     auto_choice = sys.argv[1].strip() if len(sys.argv) > 1 else None
     menu_groups = {
         "1": ("GITHUB", [
-            (1, "Quick Push", "Stage, commit, push changes, and auto-deploy to Netlify", "↑"),
+            (1, "Quick Push", "Stage, commit, push changes, and auto-deploy", "↑"),
             (2, "Quick Pull", "Fetch and merge the latest remote changes", "↓"),
             (3, "Create Repository", "Create and publish a new GitHub repository", "+"),
             (4, "Clone Repository", "Clone a GitHub repository to your Desktop", "⇩"),
             (5, "Delete Repository", "Permanently delete a GitHub repository", "×"),
         ]),
-        "2": ("NETLIFY", [
-            (6, "Deploy Site", "Deploy a project to Netlify", "▲"),
-            (7, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
-            (8, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
+        "2": ("VERCEL", [
+            (6, "Deploy to Vercel", "Deploy production build to Vercel", "▲"),
+            (7, "Open Live Vercel Site", "Open live Vercel URL in web browser", "↗"),
         ]),
-        "3": ("GOOGLE APPS SCRIPT", [
-            (9, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
+        "3": ("NETLIFY", [
+            (8, "Deploy Site", "Deploy a project to Netlify", "▲"),
+            (9, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
+            (10, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
         ]),
-        "4": ("WORKSPACE", [
-            (10, "Project Status", "View recent commits and working-tree changes", "≡"),
-            (11, "Switch Project", "Choose another local Git project", "⇄"),
-            (12, "Exit", "Close the automation center", "×"),
+        "4": ("GOOGLE APPS SCRIPT", [
+            (11, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
+        ]),
+        "5": ("WORKSPACE", [
+            (12, "Project Status", "View recent commits and live deployment URLs", "≡"),
+            (13, "Switch Project", "Choose another local Git project", "⇄"),
+            (14, "Exit", "Close the automation center", "×"),
         ]),
     }
 
@@ -627,13 +704,14 @@ def main():
             print_banner(target_project)
             print(f"  {DIM}CATEGORIES{RESET}")
             print(f"  {GREEN}[1]{RESET}  {CYAN}{BOLD}GitHub{RESET}               {DIM}Repository and source control{RESET}")
-            print(f"  {GREEN}[2]{RESET}  {CYAN}{BOLD}Netlify{RESET}              {DIM}Hosting and deployments{RESET}")
-            print(f"  {GREEN}[3]{RESET}  {CYAN}{BOLD}Google Apps Script{RESET}   {DIM}Script source and deployments{RESET}")
-            print(f"  {GREEN}[4]{RESET}  {CYAN}{BOLD}Workspace{RESET}            {DIM}Project tools and exit{RESET}")
+            print(f"  {GREEN}[2]{RESET}  {CYAN}{BOLD}Vercel{RESET}               {DIM}Hosting and production deploys{RESET}")
+            print(f"  {GREEN}[3]{RESET}  {CYAN}{BOLD}Netlify{RESET}              {DIM}Hosting and deployments{RESET}")
+            print(f"  {GREEN}[4]{RESET}  {CYAN}{BOLD}Google Apps Script{RESET}   {DIM}Script source and deployments{RESET}")
+            print(f"  {GREEN}[5]{RESET}  {CYAN}{BOLD}Workspace{RESET}            {DIM}Project tools and exit{RESET}")
             print(f"  {DIM}[0]  Exit{RESET}\n")
 
             try:
-                category = input(f"{YELLOW}{BOLD}  SELECT CATEGORY [0-4]: {RESET}").strip()
+                category = input(f"{YELLOW}{BOLD}  SELECT CATEGORY [0-5]: {RESET}").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nExiting...")
                 break
@@ -644,7 +722,7 @@ def main():
 
             menu_group = menu_groups.get(category)
             if not menu_group:
-                print(f"{RED}Invalid category. Choose a number from 0 to 4.{RESET}")
+                print(f"{RED}Invalid category. Choose a number from 0 to 5.{RESET}")
                 continue
 
             choice = print_menu_section(*menu_group)
@@ -666,16 +744,20 @@ def main():
         elif choice == "5":
             delete_github(target_project)
         elif choice == "6":
-            deploy_netlify(target_project)
+            deploy_vercel(target_project)
         elif choice == "7":
-            create_netlify_site(target_project)
+            open_vercel_site(target_project)
         elif choice == "8":
-            delete_netlify(target_project)
+            deploy_netlify(target_project)
         elif choice == "9":
-            deploy_apps_script(target_project)
+            create_netlify_site(target_project)
         elif choice == "10":
-            view_status(target_project)
+            delete_netlify(target_project)
         elif choice == "11":
+            deploy_apps_script(target_project)
+        elif choice == "12":
+            view_status(target_project)
+        elif choice == "13":
             all_projs = list_desktop_projects()
             print(f"\n{BOLD}Available Desktop Projects:{RESET}")
             for i, p in enumerate(all_projs, start=1):
@@ -688,11 +770,11 @@ def main():
                     print(f"{GREEN}Switched to: {os.path.basename(target_project)}{RESET}")
             except (EOFError, KeyboardInterrupt):
                 pass
-        elif choice in ("12", "q", "exit"):
+        elif choice in ("14", "q", "exit"):
             print(f"\n{GREEN}Goodbye! 👋{RESET}\n")
             break
         else:
-            print(f"{RED}Invalid selection. Please choose 1 to 12.{RESET}")
+            print(f"{RED}Invalid selection. Please choose a valid option.{RESET}")
 
         try:
             input(f"\n{DIM}Press [ENTER] to return to menu...{RESET}")

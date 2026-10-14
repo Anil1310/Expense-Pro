@@ -1,17 +1,37 @@
-const API_URL = "/.netlify/functions/apps-script";
-
-export async function callAppsScript(method, ...args) {
-  const response = await fetch(API_URL, {
+async function sendApiRequest(endpoint, payload) {
+  return fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ method, args })
+    body: JSON.stringify(payload)
   });
+}
+
+export async function callAppsScript(method, ...args) {
+  const payloadData = { method, args };
+  
+  // Try Vercel / Universal endpoint first, then fallback to Netlify
+  let response;
+  try {
+    response = await sendApiRequest("/api/apps-script", payloadData);
+    if (response.status === 404) {
+      response = await sendApiRequest("/.netlify/functions/apps-script", payloadData);
+    }
+  } catch (err) {
+    // If first request failed network-wise, attempt fallback
+    try {
+      response = await sendApiRequest("/.netlify/functions/apps-script", payloadData);
+    } catch {
+      throw new Error("Unable to connect to the backend server. Check your network connection.");
+    }
+  }
 
   let payload;
   try {
     payload = await response.json();
   } catch {
-    throw new Error("The Apps Script backend returned an invalid response.");
+    throw new Error(
+      "The Apps Script backend returned an invalid response. Ensure your Google Apps Script Web App is deployed with 'Execute as: Me' and 'Who has access: Anyone'."
+    );
   }
 
   if (!response.ok || !payload.success) {

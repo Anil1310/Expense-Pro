@@ -1,5 +1,9 @@
 dist/**
 netlify/**
+api/**
+vercel.json
+.vercel-site.json
+.vercel/**
 scripts/**
 src/**
 node_modules/**

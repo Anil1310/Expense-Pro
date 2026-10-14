@@ -5,3 +5,13 @@
 
 [functions]
   node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/apps-script"
+  to = "/.netlify/functions/apps-script"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
