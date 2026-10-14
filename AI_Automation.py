@@ -9,6 +9,7 @@ import sys
 import subprocess
 import datetime
 import shutil
+import json
 from urllib.parse import urlencode, urlparse
 
 # Color Codes
@@ -145,6 +146,32 @@ def get_git_info(project_dir):
     )
     remote = remote_result.stdout.strip() if remote_result.returncode == 0 else None
     return branch, remote
+
+
+def get_netlify_site_url(project_dir):
+    """Read the configured Netlify site URL for a project."""
+    config_path = os.path.join(project_dir, ".netlify-site.json")
+    if not os.path.isfile(config_path):
+        return None
+
+    try:
+        with open(config_path, encoding="utf-8") as config_file:
+            config = json.load(config_file)
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"{RED}Error reading Netlify site configuration: {error}{RESET}")
+        return None
+
+    site_url = config.get("siteUrl") if isinstance(config, dict) else None
+    if not isinstance(site_url, str):
+        print(f"{RED}Error: .netlify-site.json must contain a siteUrl.{RESET}")
+        return None
+
+    parsed_url = urlparse(site_url)
+    if parsed_url.scheme != "https" or not parsed_url.netloc:
+        print(f"{RED}Error: Invalid HTTPS siteUrl in .netlify-site.json.{RESET}")
+        return None
+
+    return f"{site_url.rstrip('/')}/"
 
 
 def quick_push(project_dir):
@@ -552,6 +579,7 @@ def view_status(project_dir):
     """Display project and Netlify details."""
     proj_name = os.path.basename(project_dir)
     branch, remote = get_git_info(project_dir)
+    netlify_site_url = get_netlify_site_url(project_dir)
 
     print(f"\n{CYAN}--------------------------------------------------------{RESET}")
     print(f"📊 {BOLD}Project Information & Status{RESET}")
@@ -560,7 +588,7 @@ def view_status(project_dir):
     print(f"  {BOLD}Directory:{RESET}        {project_dir}")
     print(f"  {BOLD}GitHub Remote:{RESET}    {remote or 'Not configured'}")
     print(f"  {BOLD}Current Branch:{RESET}   {branch}")
-    print(f"  {BOLD}Primary Live URL:{RESET} {CYAN}https://divinecoach.netlify.app/{RESET}\n")
+    print(f"  {BOLD}Primary Live URL:{RESET} {CYAN}{netlify_site_url or 'Not configured'}{RESET}\n")
 
     print(f"{BOLD}Recent Commits:{RESET}")
     subprocess.run('git log -n 4 --format="  • %h | %s (%cr)"', shell=True, cwd=project_dir)
