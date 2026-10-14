@@ -7379,4 +7379,29 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         background: rgba(255, 255, 255, 0.15);
     }
 
+    @media (max-width: 768px) {
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body.dashboard-active,
+        body.reports-active {
+            height: auto !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .app-container {
+            height: auto !important;
+            overflow: visible !important;
+        }
+
+        .main-content {
+            height: auto !important;
+            min-height: 100vh !important;
+            min-height: 100dvh !important;
+            overflow: visible !important;
+        }
+    }
+
 </style>
