@@ -31,11 +31,21 @@ Expense Tracker Pro: 2026 Frontend Code
                 body: JSON.stringify(payload)
               });
 
-              if (res.status === 404 && urlIdx + 1 < endpoints.length) {
+              if (!res.ok && urlIdx + 1 < endpoints.length) {
                 return sendRequest(urlIdx + 1);
               }
 
-              const data = await res.json();
+              const rawText = await res.text();
+              let data;
+              try {
+                data = rawText && rawText.trim() ? JSON.parse(rawText) : {};
+              } catch (parseErr) {
+                if (urlIdx + 1 < endpoints.length) {
+                  return sendRequest(urlIdx + 1);
+                }
+                throw new Error("Invalid response from server: " + (rawText ? rawText.slice(0, 100) : "empty response"));
+              }
+
               if (!res.ok || (data && data.success === false)) {
                 throw new Error(data?.error || ("Apps Script request failed: " + res.status));
               }
