@@ -1,8 +1,17 @@
 dist/**
 netlify/**
 scripts/**
+src/**
+node_modules/**
+package.json
+package-lock.json
+vite.config.js
+index.html
+AI_Automation.py
+Helper_Netlify.js
 .netlify-site.json
 .gitignore
 .DS_Store
 .venv/**
 __pycache__/**
+README.md

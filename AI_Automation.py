@@ -9,7 +9,8 @@ import sys
 import subprocess
 import datetime
 import shutil
-from urllib.parse import urlencode
+import json
+from urllib.parse import urlencode, urlparse
 
 # Color Codes
 CYAN = "\033[1;36m"
@@ -83,13 +84,38 @@ def select_project():
 
 def print_banner(project_path):
     proj_name = os.path.basename(project_path) if project_path else "Workspace"
-    print(f"\n{MAGENTA}================================================================{RESET}")
-    print(f"{CYAN}{BOLD}       🚀 GITHUB & NETLIFY AUTOMATION CONTROL CENTER            {RESET}")
-    print(f"{DIM}            Account: Anil1310 (Anil Kumar Chahar)               {RESET}")
-    print(f"{MAGENTA}----------------------------------------------------------------{RESET}")
-    print(f"  {CYAN}📁 Active Project:{RESET} {BOLD}{GREEN}{proj_name}{RESET}")
-    print(f"  {DIM}Path: {project_path}{RESET}")
-    print(f"{MAGENTA}================================================================{RESET}\n")
+    branch, remote = get_git_info(project_path) if project_path else ("unknown", None)
+    border = "━" * 74
+    print(f"\n{CYAN}{border}{RESET}")
+    print(f"{CYAN}  {BOLD}DEVOPS CONTROL CENTER{RESET}{CYAN}  /  GitHub · Netlify · Apps Script{RESET}")
+    print(f"{CYAN}{border}{RESET}")
+    print(f"  {DIM}PROJECT{RESET}  {BOLD}{proj_name}{RESET}  {DIM}·  BRANCH{RESET}  {GREEN}{branch}{RESET}")
+    print(f"  {DIM}PATH{RESET}     {project_path}")
+    print(f"  {DIM}ORIGIN{RESET}   {remote or 'Not configured'}")
+    print(f"{CYAN}{border}{RESET}\n")
+
+
+def print_menu_section(title, options):
+    """Print a vertical submenu and return its selected action."""
+    print(f"\n{CYAN}{BOLD}  {title}{RESET}")
+    print(f"  {DIM}{'─' * 48}{RESET}")
+    for menu_number, (_, label, description, icon) in enumerate(options, start=1):
+        print(f"  {GREEN}[{menu_number}]{RESET}  {CYAN}{BOLD}{icon} {label}{RESET}")
+        print(f"       {DIM}{description}{RESET}")
+    print(f"  {DIM}[0]  Back to main menu{RESET}")
+
+    try:
+        selection = input(f"\n{YELLOW}{BOLD}  CHOOSE OPTION [0-{len(options)}]: {RESET}").strip()
+    except (EOFError, KeyboardInterrupt):
+        return None
+
+    if selection == "0":
+        return None
+    if selection.isdigit() and 1 <= int(selection) <= len(options):
+        return str(options[int(selection) - 1][0])
+
+    print(f"{RED}Invalid submenu selection.{RESET}")
+    return None
 
 
 def run_cmd(cmd, cwd=None, check=True):
@@ -104,18 +130,59 @@ def run_cmd(cmd, cwd=None, check=True):
 
 def get_git_info(project_dir):
     """Get active branch and remote origin."""
+    branch_result = subprocess.run(
+        ["git", "branch", "--show-current"],
+        capture_output=True,
+        text=True,
+        cwd=project_dir
+    )
+    branch = branch_result.stdout.strip() or "main"
+
+    remote_result = subprocess.run(
+        ["git", "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        cwd=project_dir
+    )
+    remote = remote_result.stdout.strip() if remote_result.returncode == 0 else None
+    return branch, remote
+
+
+def get_netlify_site_url(project_dir):
+    """Read the configured Netlify site URL for a project."""
+    config_path = os.path.join(project_dir, ".netlify-site.json")
+    if not os.path.isfile(config_path):
+        return None
+
     try:
-        branch = subprocess.check_output("git branch --show-current", shell=True, text=True, cwd=project_dir).strip() or "main"
-        remote = subprocess.check_output("git remote get-url origin", shell=True, text=True, cwd=project_dir).strip()
-        return branch, remote
-    except Exception:
-        return "main", "git@github.com:Anil1310/App.git"
+        with open(config_path, encoding="utf-8") as config_file:
+            config = json.load(config_file)
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"{RED}Error reading Netlify site configuration: {error}{RESET}")
+        return None
+
+    site_url = config.get("siteUrl") if isinstance(config, dict) else None
+    if not isinstance(site_url, str):
+        print(f"{RED}Error: .netlify-site.json must contain a siteUrl.{RESET}")
+        return None
+
+    parsed_url = urlparse(site_url)
+    if parsed_url.scheme != "https" or not parsed_url.netloc:
+        print(f"{RED}Error: Invalid HTTPS siteUrl in .netlify-site.json.{RESET}")
+        return None
+
+    return f"{site_url.rstrip('/')}/"
 
 
 def quick_push(project_dir):
-    """Stage, commit, push, and offer interactive Netlify deploy."""
+    """Stage, commit, push, and automatically deploy to Netlify."""
     proj_name = os.path.basename(project_dir)
     branch, remote = get_git_info(project_dir)
+
+    if not remote:
+        print(f"{RED}❌ No 'origin' remote is configured for this project.{RESET}")
+        print("Add your GitHub repository with: git remote add origin <repository-url>")
+        return
 
     print(f"\n{CYAN}--------------------------------------------------------{RESET}")
     print(f"🚀 {BOLD}Auto-Pushing:{RESET} {GREEN}{proj_name}{RESET} -> {BLUE}{remote}{RESET}")
@@ -150,21 +217,14 @@ def quick_push(project_dir):
 
     if success:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! All changes pushed to GitHub successfully.{RESET}")
-
-        print(f"\n{YELLOW}Deploy updated changes to Netlify now? [Y/n]: {RESET}", end="")
-        try:
-            choice = input().strip().lower()
-        except EOFError:
-            choice = "y"
-
-        if choice in ("", "y", "yes"):
-            deploy_netlify(project_dir)
+        print(f"\n{CYAN}🚀 Automatically deploying updated changes to Netlify...{RESET}")
+        deploy_netlify(project_dir, auto=True)
     else:
         print(f"\n{RED}❌ Push failed. Please check remote origin.{RESET}")
 
 
-def deploy_netlify(project_dir):
-    """Run Netlify interactive project selector (1, 2, 3...)."""
+def deploy_netlify(project_dir, auto=False):
+    """Run Netlify deployment tool."""
     helper_path = os.path.join(project_dir, "Helper_Netlify.js")
     if not os.path.exists(helper_path):
         helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "Helper_Netlify.js")
@@ -173,7 +233,10 @@ def deploy_netlify(project_dir):
         print(f"{RED}Error: Helper_Netlify.js not found.{RESET}")
         return
 
-    subprocess.run(["node", helper_path, project_dir])
+    cmd = ["node", helper_path, project_dir]
+    if auto:
+        cmd.append("--auto")
+    subprocess.run(cmd)
 
 
 def create_netlify_site(project_dir):
@@ -278,17 +341,132 @@ def delete_github(project_dir):
     subprocess.run(["node", helper_path])
 
 
+def change_github_visibility(project_dir, desired_visibility):
+    """Set the selected GitHub repository's visibility."""
+    if desired_visibility not in ("public", "private"):
+        print(f"{RED}❌ Unsupported repository visibility: {desired_visibility}{RESET}")
+        return False
+
+    _, remote = get_git_info(project_dir)
+    if not remote:
+        print(f"{RED}❌ No 'origin' remote is configured for this project.{RESET}")
+        return False
+
+    if remote.startswith("git@github.com:"):
+        repo_path = remote.removeprefix("git@github.com:")
+    else:
+        parsed_remote = urlparse(remote)
+        if parsed_remote.hostname != "github.com":
+            print(f"{RED}❌ The configured origin is not a GitHub repository: {remote}{RESET}")
+            return False
+        repo_path = parsed_remote.path.lstrip("/")
+
+    repo_path = repo_path.removesuffix(".git").rstrip("/")
+    if len(repo_path.split("/")) != 2 or not all(repo_path.split("/")):
+        print(f"{RED}❌ Could not determine the GitHub owner/repository from origin: {remote}{RESET}")
+        return False
+
+    gh = shutil.which("gh")
+    if not gh:
+        print(f"{RED}❌ GitHub CLI ('gh') is not installed or is not available on PATH.{RESET}")
+        print("Install it from https://cli.github.com/ and run: gh auth login")
+        return False
+
+    view_result = subprocess.run(
+        [gh, "repo", "view", repo_path, "--json", "visibility", "--jq", ".visibility"],
+        capture_output=True,
+        text=True
+    )
+    if view_result.returncode != 0:
+        details = view_result.stderr.strip() or "GitHub CLI could not read this repository."
+        print(f"{RED}❌ Unable to read repository visibility: {details}{RESET}")
+        print("Check GitHub CLI authentication with: gh auth status")
+        return False
+
+    current_visibility = view_result.stdout.strip().lower()
+    if current_visibility not in ("public", "private", "internal"):
+        print(f"{RED}❌ GitHub returned an unexpected visibility: {view_result.stdout.strip()}{RESET}")
+        return False
+
+    print(f"\nRepository: {repo_path}")
+    print(f"Current visibility: {current_visibility}")
+    if desired_visibility == current_visibility:
+        print(f"{GREEN}Repository is already {current_visibility}.{RESET}")
+        return True
+
+    if desired_visibility == "public":
+        print(f"{YELLOW}Warning: making {repo_path} public allows anyone to view its code and history.{RESET}")
+
+    try:
+        confirmation = input(f"Type '{repo_path}' to confirm making it {desired_visibility}: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\nVisibility change cancelled.")
+        return False
+    if confirmation != repo_path:
+        print("Confirmation did not match. Visibility was not changed.")
+        return False
+
+    edit_result = subprocess.run(
+        [
+            gh,
+            "repo",
+            "edit",
+            repo_path,
+            "--visibility",
+            desired_visibility,
+            "--accept-visibility-change-consequences"
+        ],
+        capture_output=True,
+        text=True
+    )
+    if edit_result.returncode != 0:
+        details = edit_result.stderr.strip() or edit_result.stdout.strip()
+        print(f"{RED}❌ GitHub could not change repository visibility (exit code {edit_result.returncode}).{RESET}")
+        if details:
+            print(details)
+        return False
+
+    verify_result = subprocess.run(
+        [gh, "repo", "view", repo_path, "--json", "visibility", "--jq", ".visibility"],
+        capture_output=True,
+        text=True
+    )
+    if verify_result.returncode != 0:
+        details = verify_result.stderr.strip() or "Could not verify the updated visibility."
+        print(f"{YELLOW}⚠️ GitHub accepted the change, but verification failed: {details}{RESET}")
+        return False
+
+    verified_visibility = verify_result.stdout.strip().lower()
+    if verified_visibility != desired_visibility:
+        print(f"{RED}❌ Visibility verification failed; GitHub reports {verified_visibility or 'an unknown value'}.{RESET}")
+        return False
+
+    print(f"{GREEN}✅ Repository {repo_path} is now {verified_visibility}.{RESET}")
+    return True
+
+
 def quick_pull(project_dir):
     """Pull latest updates from GitHub."""
     branch, remote = get_git_info(project_dir)
     proj_name = os.path.basename(project_dir)
+
+    if not remote:
+        print(f"{RED}❌ Cannot pull updates: no 'origin' remote is configured.{RESET}")
+        print("Add your GitHub repository with: git remote add origin <repository-url>")
+        return False
+
     print(f"\n{CYAN}--------------------------------------------------------{RESET}")
     print(f"⬇️  {BOLD}Pulling updates for:{RESET} {GREEN}{proj_name}{RESET} ({branch})")
     print(f"   Remote: {remote}")
     print(f"{CYAN}--------------------------------------------------------{RESET}\n")
 
-    run_cmd(f"git pull origin {branch}", cwd=project_dir)
+    result = subprocess.run(["git", "pull", "origin", branch], cwd=project_dir)
+    if result.returncode != 0:
+        print(f"\n{RED}❌ Pull failed (exit code {result.returncode}). The local project was not confirmed up to date.{RESET}")
+        return False
+
     print(f"\n{GREEN}✅ SUCCESS! Local project '{proj_name}' is up to date.{RESET}")
+    return True
 
 
 def create_repository(project_dir):
@@ -397,15 +575,16 @@ def view_status(project_dir):
     """Display project and Netlify details."""
     proj_name = os.path.basename(project_dir)
     branch, remote = get_git_info(project_dir)
+    netlify_site_url = get_netlify_site_url(project_dir)
 
     print(f"\n{CYAN}--------------------------------------------------------{RESET}")
     print(f"📊 {BOLD}Project Information & Status{RESET}")
     print(f"{CYAN}--------------------------------------------------------{RESET}")
     print(f"  {BOLD}Project Name:{RESET}     {GREEN}{proj_name}{RESET}")
     print(f"  {BOLD}Directory:{RESET}        {project_dir}")
-    print(f"  {BOLD}GitHub Remote:{RESET}    {remote}")
+    print(f"  {BOLD}GitHub Remote:{RESET}    {remote or 'Not configured'}")
     print(f"  {BOLD}Current Branch:{RESET}   {branch}")
-    print(f"  {BOLD}Primary Live URL:{RESET} {CYAN}https://divinecoach.netlify.app/{RESET}\n")
+    print(f"  {BOLD}Primary Live URL:{RESET} {CYAN}{netlify_site_url or 'Not configured'}{RESET}\n")
 
     print(f"{BOLD}Recent Commits:{RESET}")
     subprocess.run('git log -n 4 --format="  • %h | %s (%cr)"', shell=True, cwd=project_dir)
@@ -417,6 +596,28 @@ def view_status(project_dir):
 def main():
     target_project = select_project()
     auto_choice = sys.argv[1].strip() if len(sys.argv) > 1 else None
+    menu_groups = {
+        "1": ("GITHUB", [
+            (1, "Quick Push", "Stage, commit, push changes, and auto-deploy to Netlify", "↑"),
+            (2, "Quick Pull", "Fetch and merge the latest remote changes", "↓"),
+            (3, "Create Repository", "Create and publish a new GitHub repository", "+"),
+            (4, "Clone Repository", "Clone a GitHub repository to your Desktop", "⇩"),
+            (5, "Delete Repository", "Permanently delete a GitHub repository", "×"),
+        ]),
+        "2": ("NETLIFY", [
+            (6, "Deploy Site", "Deploy a project to Netlify", "▲"),
+            (7, "Connect GitHub Repository", "Set up a Netlify site from a GitHub repository", "↗"),
+            (8, "Delete Netlify Site", "Permanently delete a Netlify project", "×"),
+        ]),
+        "3": ("GOOGLE APPS SCRIPT", [
+            (9, "Deploy Apps Script", "Push source and update or create deployment", "↥"),
+        ]),
+        "4": ("WORKSPACE", [
+            (10, "Project Status", "View recent commits and working-tree changes", "≡"),
+            (11, "Switch Project", "Choose another local Git project", "⇄"),
+            (12, "Exit", "Close the automation center", "×"),
+        ]),
+    }
 
     while True:
         if auto_choice:
@@ -424,33 +625,31 @@ def main():
             auto_choice = None
         else:
             print_banner(target_project)
-            print(f"{BOLD}What would you like to do?{RESET}\n")
-
-            print(f"  {CYAN}{BOLD}--- 🐙 GITHUB AUTOMATION ---{RESET}")
-            print(f"  {GREEN}[1]{RESET}  ⚡ {BOLD}Quick Push to GitHub{RESET}     {DIM}(Stage, commit, push changes & optional deploy){RESET}")
-            print(f"  {GREEN}[2]{RESET}  ⬇️  {BOLD}Quick Pull from GitHub{RESET}   {DIM}(Pull latest commits from GitHub){RESET}")
-            print(f"  {GREEN}[3]{RESET}  ➕ {BOLD}Create New Repository{RESET}    {DIM}(Initialize project & push to GitHub){RESET}")
-            print(f"  {GREEN}[4]{RESET}  📥 {BOLD}Clone Repository{RESET}         {DIM}(Download repository from GitHub to Desktop){RESET}")
-            print(f"  {RED}[5]{RESET}  🗑️  {BOLD}Delete GitHub Repo{RESET}       {DIM}(Permanently delete GitHub repository){RESET}\n")
-
-            print(f"  {CYAN}{BOLD}--- 🌐 NETLIFY AUTOMATION ---{RESET}")
-            print(f"  {GREEN}[6]{RESET}  🚀 {BOLD}Deploy to Netlify{RESET}        {DIM}(Interactive 1, 2, 3 project selector){RESET}")
-            print(f"  {GREEN}[7]{RESET}  ✨ {BOLD}Connect GitHub Repo to Netlify{RESET} {DIM}(Import repo and configure a new site){RESET}")
-            print(f"  {RED}[8]{RESET}  🗑️  {BOLD}Delete Netlify Project{RESET}   {DIM}(Permanently remove unwanted Netlify site){RESET}\n")
-
-            print(f"  {CYAN}{BOLD}--- 📜 GOOGLE APPS SCRIPT ---{RESET}")
-            print(f"  {GREEN}[9]{RESET}  🚀 {BOLD}Deploy Apps Script Update{RESET} {DIM}(clasp push, then update or create deployment){RESET}\n")
-
-            print(f"  {CYAN}{BOLD}--- ⚙️  WORKSPACE & EXIT ---{RESET}")
-            print(f"  {GREEN}[10]{RESET} 📊 {BOLD}View Project Info & Status{RESET} {DIM}(Show branch, recent commits, live links){RESET}")
-            print(f"  {GREEN}[11]{RESET} 📁 {BOLD}Switch Working Project{RESET}     {DIM}(Select another Desktop project){RESET}")
-            print(f"  {RED}[12]{RESET} ❌ {BOLD}Exit{RESET}\n")
+            print(f"  {DIM}CATEGORIES{RESET}")
+            print(f"  {GREEN}[1]{RESET}  {CYAN}{BOLD}GitHub{RESET}               {DIM}Repository and source control{RESET}")
+            print(f"  {GREEN}[2]{RESET}  {CYAN}{BOLD}Netlify{RESET}              {DIM}Hosting and deployments{RESET}")
+            print(f"  {GREEN}[3]{RESET}  {CYAN}{BOLD}Google Apps Script{RESET}   {DIM}Script source and deployments{RESET}")
+            print(f"  {GREEN}[4]{RESET}  {CYAN}{BOLD}Workspace{RESET}            {DIM}Project tools and exit{RESET}")
+            print(f"  {DIM}[0]  Exit{RESET}\n")
 
             try:
-                choice = input(f"{YELLOW}{BOLD}Enter choice (1-12): {RESET}").strip()
+                category = input(f"{YELLOW}{BOLD}  SELECT CATEGORY [0-4]: {RESET}").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nExiting...")
                 break
+
+            if category == "0":
+                print(f"\n{GREEN}Goodbye! 👋{RESET}\n")
+                break
+
+            menu_group = menu_groups.get(category)
+            if not menu_group:
+                print(f"{RED}Invalid category. Choose a number from 0 to 4.{RESET}")
+                continue
+
+            choice = print_menu_section(*menu_group)
+            if choice is None:
+                continue
 
         if choice == "1":
             quick_push(target_project)
