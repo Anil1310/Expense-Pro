@@ -192,6 +192,21 @@ def get_vercel_site_url(project_dir):
     return None
 
 
+def get_vercel_project_name(project_dir):
+    """Read configured Vercel project name."""
+    config_path = os.path.join(project_dir, ".vercel-site.json")
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("name")
+        except Exception:
+            pass
+    if "expense" in os.path.basename(project_dir).lower():
+        return "app-tcrn"
+    return None
+
+
 def deploy_vercel(project_dir, auto=False):
     """Deploy project to Vercel (Production)."""
     proj_name = os.path.basename(project_dir)
@@ -203,6 +218,10 @@ def deploy_vercel(project_dir, auto=False):
     cmd = [vercel_bin, "--prod"] if vercel_bin else ["npx", "-y", "vercel", "--prod"]
     if auto:
         cmd.append("--yes")
+
+    project_name = get_vercel_project_name(project_dir)
+    if project_name:
+        cmd.extend(["--project", project_name])
 
     print(f"{CYAN}Running: {' '.join(cmd)}...{RESET}")
     proc = subprocess.run(cmd, cwd=project_dir)
