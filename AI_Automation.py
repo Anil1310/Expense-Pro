@@ -189,7 +189,7 @@ def get_vercel_site_url(project_dir):
             pass
 
     if "expense" in os.path.basename(project_dir).lower():
-        return "https://app-tcrn.vercel.app/"
+        return "https://expense-pro-rust.vercel.app/"
     return None
 
 
@@ -204,7 +204,7 @@ def get_vercel_project_name(project_dir):
         except Exception:
             pass
     if "expense" in os.path.basename(project_dir).lower():
-        return "app-tcrn"
+        return "expense-pro"
     return None
 
 
@@ -227,7 +227,7 @@ def deploy_vercel(project_dir, auto=False):
     print(f"{CYAN}Running: {' '.join(cmd)}...{RESET}")
     proc = subprocess.run(cmd, cwd=project_dir)
 
-    live_url = get_vercel_site_url(project_dir) or "https://app-tcrn.vercel.app/"
+    live_url = get_vercel_site_url(project_dir) or "https://expense-pro-rust.vercel.app/"
     if proc.returncode == 0:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! Deployed to Vercel successfully.{RESET}")
         print(f"👉 {BOLD}{CYAN}{live_url}{RESET}\n")
@@ -242,7 +242,7 @@ def deploy_vercel(project_dir, auto=False):
 
 def open_vercel_site(project_dir):
     """Open active Vercel site in browser."""
-    url = get_vercel_site_url(project_dir) or "https://app-tcrn.vercel.app/"
+    url = get_vercel_site_url(project_dir) or "https://expense-pro-rust.vercel.app/"
     print(f"\n{CYAN}Opening Vercel site in browser:{RESET} {GREEN}{url}{RESET}")
     try:
         subprocess.run(["open", url])
