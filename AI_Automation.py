@@ -165,12 +165,12 @@ def quick_push(project_dir):
 
 def deploy_netlify(project_dir):
     """Run Netlify interactive project selector (1, 2, 3...)."""
-    helper_path = os.path.join(project_dir, "helper_netlify.js")
+    helper_path = os.path.join(project_dir, "Helper_Netlify.js")
     if not os.path.exists(helper_path):
-        helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "helper_netlify.js")
+        helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "Helper_Netlify.js")
 
     if not os.path.exists(helper_path):
-        print(f"{RED}Error: helper_netlify.js not found.{RESET}")
+        print(f"{RED}Error: Helper_Netlify.js not found.{RESET}")
         return
 
     subprocess.run(["node", helper_path, project_dir])
@@ -206,12 +206,12 @@ def create_netlify_site(project_dir):
 
 def delete_netlify(project_dir):
     """Run Netlify interactive project deletion tool."""
-    helper_path = os.path.join(project_dir, "helper_netlify.js")
+    helper_path = os.path.join(project_dir, "Helper_Netlify.js")
     if not os.path.exists(helper_path):
-        helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "helper_netlify.js")
+        helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "Helper_Netlify.js")
 
     if not os.path.exists(helper_path):
-        print(f"{RED}Error: helper_netlify.js not found.{RESET}")
+        print(f"{RED}Error: Helper_Netlify.js not found.{RESET}")
         return
 
     subprocess.run(["node", helper_path, project_dir, "--delete"])
@@ -267,12 +267,12 @@ def deploy_apps_script(project_dir):
 
 def delete_github(project_dir):
     """Run GitHub interactive repository deletion tool."""
-    helper_path = os.path.join(project_dir, "helper_github.js")
+    helper_path = os.path.join(project_dir, "Helper_GitHub.js")
     if not os.path.exists(helper_path):
-        helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "helper_github.js")
+        helper_path = os.path.join(DESKTOP_DIR, "GitHub Automation", "Helper_GitHub.js")
 
     if not os.path.exists(helper_path):
-        print(f"{RED}Error: helper_github.js not found.{RESET}")
+        print(f"{RED}Error: Helper_GitHub.js not found.{RESET}")
         return
 
     subprocess.run(["node", helper_path])

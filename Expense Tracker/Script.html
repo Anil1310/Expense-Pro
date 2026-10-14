@@ -317,8 +317,11 @@ Expense Tracker Pro: 2026 JavaScript Code
     function handleLoginError(error) {
         const loginBtn = document.getElementById('login-btn');
         const errorMsg = document.getElementById('error-msg');
+        const details = typeof error === 'string' ? error : (error && error.message);
 
-        errorMsg.textContent = "Login failed. Please try again.";
+        errorMsg.textContent = details
+            ? "Login failed: " + details
+            : "Login failed because the server could not be reached. Please try again.";
         errorMsg.style.display = 'block';
         loginBtn.innerHTML = "Sign In";
         loginBtn.disabled = false;

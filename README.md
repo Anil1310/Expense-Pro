@@ -1,13 +1,12 @@
 # Expense Pro — Advanced Personal Expense Tracker
 
-[![Tech Stack](https://img.shields.io/badge/Stack-Google_Apps_Script_|_Google_Sheets_|_JS-blue.svg)](#)
-[![Frontend](https://img.shields.io/badge/Frontend-Vanilla_JS_|_Bootstrap_5-orange.svg)](#)
-[![PWA](https://img.shields.io/badge/PWA-Offline_Ready-success.svg)](#)
+[![Tech Stack](https://img.shields.io/badge/Stack-React_|_Vite_|_Google_Sheets-blue.svg)](#)
+[![Frontend](https://img.shields.io/badge/Frontend-React_|_Vite-orange.svg)](#)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
 
-**Expense Pro** is a modern, high-performance, and feature-rich Web Application designed to track, manage, and analyze personal finances. Powered by a **Google Apps Script** backend and a serverless **Google Sheets Database**, the application provides a sleek, responsive, and secure experience for multiple users.
+**Expense Pro** is a responsive React and Vite expense tracker. It retains the existing Google Apps Script backend and Google Sheets database; migrating the frontend does not move or recreate spreadsheet data.
 
-With professional analytics, multi-user role management, automated report generation, and full PWA capabilities, Expense Pro transforms a simple Google Sheet into a full-scale Enterprise-grade Expense Management system.
+The app includes expense entry and editing, month and all-record reports, charts and insights, CSV exports, recycle-bin restore, spreadsheet automation, and emailed PDF reports.
 
 ---
 
@@ -15,14 +14,13 @@ With professional analytics, multi-user role management, automated report genera
 
 *   **Premium Glassmorphic UI**: Beautiful responsive layout designed with modern CSS custom variables, vibrant colors, premium dark mode, and micro-animations for high-fidelity mobile and desktop experiences.
 *   **Multi-User Portal & Security PINs**: Secure access control supporting multiple profiles (e.g., Admin and User views) secured with numeric PINs and a custom audit logging database.
-*   **Rich Analytics Dashboard**: Dynamic data visualization powered by **Chart.js** providing monthly comparisons, category-wise spending distribution, user spending breakdowns, and yearly trend lines.
+*   **Rich Analytics Dashboard**: Review monthly and yearly spending, category summaries, and transaction insights.
 *   **Advanced Data Operations**:
-    *   **In-Place Editing & Month Switching**: Dynamically updates entries or transparently moves them across monthly database sheets on the fly.
-    *   **Soft Deletion**: All deleted items are archived in a `Recycle Bin` (Trash sheet) with details of who deleted them and when.
-    *   **Auto-Complete & Category Matcher**: An intelligent input engine that maps common keywords to matching category emoji icons (e.g., `rapido` → `🛵 Rapido`, `netflix` → `📺 Entertainment`).
-*   **Mail & Export Services**: Export current month reports as Excel sheets, view them as formatted PDFs, or mail them directly as attachments using built-in Google Workspace integrations.
-*   **Keyboard-Driven Command Palette**: Access pages, trigger syncs, search logs, and perform actions rapidly using an in-app `Cmd+K` style search palette.
-*   **PWA & Offline Ready**: Service worker setup (`sw.js`) and application manifest (`manifest.json`) enabling mobile installations, custom splash screens, and localized data caching.
+    *   Add and edit expenses, including moving an entry between months.
+    *   Delete and restore expenses using the Google Sheets `Trash` sheet.
+    *   Manage the expense-item list stored in Google Sheets.
+*   **Reports and exports**: Search transactions and download CSV reports; send a PDF report using the existing Apps Script email service.
+*   **Responsive design**: The React screens reuse the existing app styles, colors, and responsive layout.
 
 ---
 
@@ -30,26 +28,24 @@ With professional analytics, multi-user role management, automated report genera
 
 | Layer | Technologies Used | Description |
 | :--- | :--- | :--- |
-| **Frontend** | HTML5, Vanilla JavaScript (ES6+), Bootstrap 5, FontAwesome 6 | Core UI structures, responsive styling, and client-side interactions. |
-| **Backend** | Google Apps Script (GAS V8 Runtime) | Serverless APIs executing server side within the Google Cloud. |
-| **Database** | Google Sheets API (Master/Child Architecture) | Scalable database where each month has a dedicated sheet alongside a unified `Data` sheet. |
-| **Data Viz** | Chart.js | Renders dynamic analytics charts for categories, years, and months. |
-| **Caching** | Client Cache Wrapper (`window.expenseCache`) | Minimizes GAS API calls for fast loading and offline-ready reports. |
-| **Mailing** | Google Apps Script `GmailApp` / `MailApp` | Automates emailing of formatted PDF reports to users. |
+| **Frontend** | React, Vite, Bootstrap 5, Font Awesome 6 | React single-page app with Vite development and production builds. |
+| **API** | Netlify Function and Google Apps Script | The Netlify Function forwards frontend requests to the existing Apps Script web app. |
+| **Database** | Google Sheets | Existing monthly sheets, consolidated data, audit log, item list, and recycle bin remain unchanged. |
+| **Mailing** | Google Apps Script `GmailApp` / `MailApp` | The existing backend generates and emails PDF reports. |
 
 ---
 
 ## 📐 System Architecture
 
-The application implements a decoupled client-server architecture inside the Google Workspace ecosystem:
+The React frontend calls the existing Apps Script API through a same-origin Netlify Function. Apps Script and the existing Google Sheets remain the source of truth:
 
 ```mermaid
 graph TD
-    Client[Web App Frontend: Bootstrap 5 + Vanilla JS] <-->|google.script.run| GAS[Google Apps Script Backend]
-    GAS <-->|SpreadsheetApp API| DB[(Google Sheets Database)]
+    Client[React + Vite Frontend] -->|JSON API request| Proxy[Netlify Function]
+    Proxy -->|Apps Script web app URL| GAS[Google Apps Script Backend]
+    GAS <-->|SpreadsheetApp API| DB[(Existing Google Sheets)]
     GAS -->|GmailApp API| Mail[User Email Inbox]
-    Client -->|Local Storage| Cache[Client-side Caching]
-    Client -->|Service Worker| sw[sw.js PWA Offline Cache]
+    Client -->|Session preference| LocalStorage[Browser local storage]
 ```
 
 ### Database Schema Design
@@ -65,7 +61,7 @@ graph TD
 To run this project, you need a Google Account and basic familiarity with Google Sheets.
 
 ### Step 1: Prepare the Google Sheet
-1.  Create a new Google Sheet.
+1.  Use the existing Google Sheets database. Create a new sheet only when setting up a fresh installation.
 2.  Create sheet names for each month you wish to track (e.g., `Jan`, `Feb`, `Mar`, etc.).
 3.  Add the following header row in cell `A1` of each month sheet:
     `S.N | Unique ID | Date | Month | Item List | Amount | Credit & Remark | Admin`
@@ -89,22 +85,34 @@ To run this project, you need a Google Account and basic familiarity with Google
     const CONSOLIDATED_ID = "YOUR_CONSOLIDATED_SPREADSHEET_ID_OR_SAME_AS_MAIN";
     ```
 
-### Step 3: Local Development (Optional)
-If you prefer editing files locally, you can use [CLASP](https://github.com/google/clasp) (Command Line Apps Script Projects):
+### Step 3: Run the React frontend
+1. Install Node.js 18 or newer.
+2. Install the frontend dependencies and start Vite:
+   ```sh
+   npm install
+   npm run dev
+   ```
+3. For local Google Sheets API calls, create a `.env.local` file with your Apps Script deployment URL:
+   ```text
+   APPS_SCRIPT_WEB_APP_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
+   ```
+   Vite uses this server-side URL to proxy requests during local development. Do not add `.env.local` to source control.
+
+To update the Apps Script project locally, use [CLASP](https://github.com/google/clasp) (Command Line Apps Script Projects):
 1.  Install clasp globally: `npm install -g @google/clasp`
 2.  Log in to your Google Account: `clasp login`
 3.  Clone your script using your script ID: `clasp clone "YOUR_SCRIPT_ID"`
 4.  Make edits locally and push changes: `clasp push`
 
-### Step 4: Deploy the Web App
+### Step 4: Deploy the Apps Script backend
 1.  Inside the Apps Script editor, click **Deploy** > **New deployment**.
 2.  Choose **Web app** as the deployment type.
 3.  Configure the settings:
-    *   **Description**: `Expense Pro v1`
+    *   **Description**: `Expense Pro API`
     *   **Execute as**: `Me (your email)`
     *   **Who has access**: `Anyone` (or `Anyone with Google Account` for extra privacy)
 4.  Click **Deploy** and authorize the necessary Google Drive, Gmail, and Spreadsheet permissions.
-5.  Copy the generated **Web App URL**. This is your live application link!
+5. Copy the generated **Web App URL** ending in `/exec`; configure it as `APPS_SCRIPT_WEB_APP_URL` in Netlify.
 
 ### Host the frontend on Netlify (Google Apps Script backend)
 The Netlify build serves the Expense Tracker interface from Netlify and forwards its API calls to Google Apps Script. Sheets, Gmail, and the Apps Script backend remain in Google.
@@ -115,15 +123,15 @@ The Netlify build serves the Expense Tracker interface from Netlify and forwards
 4. In the Netlify site settings, add the environment variable `APPS_SCRIPT_WEB_APP_URL` with the Apps Script `/exec` URL as its value, then trigger a deploy.
 5. When changing Apps Script backend code, push it with `clasp` and update the same Apps Script deployment. GitHub pushes trigger Netlify frontend deploys automatically.
 
-The Netlify site URL hosts the interface; the Apps Script deployment remains the backend. Do not use Netlify's manual ZIP upload for this site because it does not deploy the required Netlify Function. Keep the GitHub repository private because the source contains spreadsheet identifiers.
+The Netlify site URL hosts the React interface; the Apps Script deployment remains the API and Sheets backend. The Netlify build runs `npm run build`, and the existing `netlify/functions/apps-script.mjs` function proxies API requests. Do not use Netlify's manual ZIP upload because it does not deploy that function. Keep the GitHub repository private because the existing source contains spreadsheet identifiers.
 
 ---
 
 ## 🔒 Security & Data Integrity
 
-*   **Role-Based Views**: User credentials restrict regular users from viewing developer settings or modifying spreadsheet structural elements.
-*   **Transactional Operations**: Upgrades and updates are executed using transactional safety checks—a record is successfully appended to the destination sheet before it is safely removed from the source sheet.
-*   **Audit Logging**: Every create, edit, move, delete, or authentication attempt triggers an automated row addition to the `Login` log sheet.
+*   **Apps Script authentication**: Sign-in is checked against the existing `Admin` sheet.
+*   **Transactional Operations**: Month changes write the entry to the destination sheet before removing it from its original sheet.
+*   **Audit Logging**: Expense changes and sign-in activity are logged in the `Login` sheet by the existing backend.
 
 ---
 
