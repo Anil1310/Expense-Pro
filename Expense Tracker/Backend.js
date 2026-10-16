@@ -170,6 +170,7 @@ function doPost(e) {
             runCompleteProcess: (...args) => runCompleteProcess(...args),
             saveProfilePhoto: (...args) => saveProfilePhoto(...args),
             cleanAllColumnEIconsAndStopTriggers: (...args) => cleanAllColumnEIconsAndStopTriggers(...args),
+            cleanAndDeduplicateList: (...args) => cleanAndDeduplicateList(...args),
             setupDatabaseSchema: (...args) => setupDatabaseSchema(...args),
             syncAllMonthsToDataTable: (...args) => syncAllMonthsToDataTable(...args)
         };
@@ -1768,16 +1769,17 @@ function syncAndFixListSheetNow() {
 }
 
 /**
- * Deduplicates items in the List sheet, cleans spaces, and renumbers IDs sequentially.
+ * Deduplicates items in the List sheet, cleans spaces, normalizes names, and renumbers IDs sequentially.
  */
 function deduplicateAndRenumberListSheet(ss, listSheet) {
     try {
         const lastRow = listSheet.getLastRow();
-        if (lastRow <= 1) return;
+        if (lastRow <= 1) return { success: true, removedCount: 0, totalItems: 0 };
         const values = listSheet.getRange(2, 1, lastRow - 1, 5).getValues();
         const seen = new Set();
         const cleanRows = [];
         let idCounter = 1;
+        let removedCount = 0;
 
         values.forEach(r => {
             const rawItem = (r[1] || '').toString().trim();
@@ -1794,15 +1796,35 @@ function deduplicateAndRenumberListSheet(ss, listSheet) {
                     r[3] || new Date(),
                     r[4] || 'Web App'
                 ]);
+            } else {
+                removedCount++;
             }
         });
 
         listSheet.getRange(2, 1, lastRow - 1, 5).clearContent();
         if (cleanRows.length > 0) {
             listSheet.getRange(2, 1, cleanRows.length, 5).setValues(cleanRows);
+            listSheet.getRange(2, 1, cleanRows.length, 1).setNumberFormat("0");
         }
+        return { success: true, removedCount: removedCount, totalItems: cleanRows.length };
     } catch (err) {
         Logger.log('Error in deduplicateAndRenumberListSheet: ' + err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+function cleanAndDeduplicateList() {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(15000);
+        const ss = SpreadsheetApp.openById(MAIN_ID);
+        const listSheet = ensureListSheet();
+        return deduplicateAndRenumberListSheet(ss, listSheet);
+    } catch (err) {
+        Logger.log('Error in cleanAndDeduplicateList: ' + err.message);
+        return { success: false, error: err.message };
+    } finally {
+        try { lock.releaseLock(); } catch (e) {}
     }
 }
 
@@ -2196,8 +2218,12 @@ Add New Item to List Sheet Functionality
 * @returns {Object} Success or error response
 */
 function addItemToList(itemName, category) {
+    const lock = LockService.getScriptLock();
     try {
-        if (!itemName || itemName.trim() === '') {
+        // Wait up to 15 seconds for concurrent requests to serialize
+        lock.waitLock(15000);
+
+        if (!itemName || itemName.toString().trim() === '') {
             return {
                 success: false,
                 message: 'Item Name Cannot Be Empty'
@@ -2207,32 +2233,42 @@ function addItemToList(itemName, category) {
         const ss = SpreadsheetApp.openById(MAIN_ID);
         const listSheet = ensureListSheet();
 
-        // Check if item already exists (case-insensitive)
-        const existingItems = getItemList();
-        const itemExists = existingItems.some(item =>
-            item.toLowerCase() === itemName.trim().toLowerCase()
-        );
-
-        if (itemExists) {
+        let finalItemName = stripEmojiIcon(itemName.toString().trim());
+        if (!finalItemName) {
             return {
                 success: false,
-                message: `"${itemName}" Already Exists In List`
+                message: 'Invalid Item Name'
             };
         }
 
-        // Get the next ID
+        const normTarget = finalItemName.toLowerCase();
+
+        // Check if item already exists directly in List sheet (case-insensitive & whitespace trimmed)
         const lastRow = listSheet.getLastRow();
-        const nextId = lastRow + 1;
+        if (lastRow > 1) {
+            const vals = listSheet.getRange(2, 2, lastRow - 1, 1).getValues();
+            for (let i = 0; i < vals.length; i++) {
+                const existing = stripEmojiIcon((vals[i][0] || '').toString().trim()).toLowerCase();
+                if (existing === normTarget) {
+                    return {
+                        success: true,
+                        message: `"${finalItemName}" Already Exists In List`,
+                        newItem: finalItemName,
+                        alreadyExisted: true
+                    };
+                }
+            }
+        }
+
+        let finalCategory = (category && category.toString().trim()) ? category.toString().trim() : inferCategoryForItem(finalItemName);
+
+        // Next sequential ID
+        const nextId = Math.max(1, lastRow);
 
         // Format date
         const now = new Date();
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const formattedDate = `${monthNames[now.getMonth()]} ${now.getDate()} ${now.getFullYear()}`;
-
-        let finalItemName = itemName.trim();
-        let finalCategory = (category && category.trim()) ? category.trim() : inferCategoryForItem(finalItemName);
-
-        finalItemName = stripEmojiIcon(finalItemName);
 
         // Add the new item
         listSheet.appendRow([
@@ -2242,9 +2278,6 @@ function addItemToList(itemName, category) {
             formattedDate,
             currentUser ? currentUser.name : "Web App"
         ]);
-
-        // Update data validation across all month sheets
-        updateDataValidationForItemList();
 
         return {
             success: true,
@@ -2258,6 +2291,10 @@ function addItemToList(itemName, category) {
             success: false,
             message: 'Error Adding Item: ' + error.toString()
         };
+    } finally {
+        try {
+            lock.releaseLock();
+        } catch (e) {}
     }
 }
 
@@ -2501,6 +2538,8 @@ function setupDatabaseSchema() {
             .setBackground("#2d3748")
             .setFontColor("#ffffff");
         report.tablesVerified.push("List");
+        const dedupResult = deduplicateAndRenumberListSheet(ss, listSheet);
+        report.listDeduplicated = dedupResult;
 
         // 5. Ensure 'Admin' table (User credentials & Roles)
         let adminSheet = ss.getSheetByName("Admin");

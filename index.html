@@ -11736,163 +11736,163 @@ Expense Tracker Pro: 2026 JavaScript Code
         renderReportsTable();
     }
 
-    function updateNotificationBadge(type, data) {
-        window.lastNotificationData[type] = data || [];
-        let lastSeen = 0;
-        let lastCleared = 0;
-        try {
-            lastSeen = parseInt(localStorage.getItem(`seen_count_${type}_${CURRENT_MONTH}`)) || 0;
-            lastCleared = parseInt(localStorage.getItem(`cleared_count_${type}_${CURRENT_MONTH}`)) || 0;
-        } catch (e) { console.warn("Storage read blocked", e); }
+    // ── Single Latest Notification Architecture ──────────────────────────────
+    let _latestNotification = null; // Holds only the single last updated or added item
+    let _hasUnreadNotification = false;
 
-        const total = (data || []).length;
-        const unseen = Math.max(0, total - lastSeen);
-        const uncleared = Math.max(0, total - lastCleared);
-        const newlyAvailable = Math.max(0, Math.min(unseen, uncleared));
-
-        const badge = document.getElementById(`${type}-notification-count`);
-        if (badge) {
-            badge.textContent = unseen;
-            badge.style.display = unseen > 0 ? 'flex' : 'none';
-        }
-
-        const list = document.getElementById(`${type}-notification-list`);
-        if (list) {
-            const maxToShow = Math.min(newlyAvailable, 8);
-            const latest = data.slice(0, maxToShow); // Only show the newest unread notifications, up to 8
-            if (latest.length === 0) {
-                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No new notifications.</div>`;
-            } else {
-                let html = `
-                    <div class="clear-notifications-header" style="padding: 6px 10px; text-align: right; background: #000; border-bottom: 2px solid rgba(255,193,7,0.3);">
-                        <button onclick="clearNotificationHistory('${type}')" style="background: none; border: 1px solid #ffc107; color: #ffc107; font-size: 0.58rem; font-weight: 800; padding: 1px 8px; border-radius: 99px; cursor: pointer; text-transform: none; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; min-height: 18px;">
-                            <span class="clear-text">Clear</span>
-                            <i class="fas fa-trash-alt clear-icon" style="display: none;"></i>
-                        </button>
-                    </div>
-                `;
-
-                html += latest.map(row => {
-                    const isArr = Array.isArray(row);
-                    const date = isArr ? row[2] : row.date;
-                    const amount = isArr ? (parseFloat(row[5]) || 0) : (row.amount || 0);
-                    const label = isArr ? (row[4] || 'Expense') : (row.item || 'Expense');
-                    const addedBy = isArr ? (row[7] || 'User') : (row.admin || 'User');
-                    const color = addedBy.toLowerCase().includes('admin') ? '#ef4444' : '#2563eb';
-                    const attribution = addedBy.toLowerCase().includes('admin') ? 'By Admin' : 'By User';
-
-                    return `
-                        <div class="notification-item" style="padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; background: #111;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1px;">
-                                <span style="font-size: 0.7rem; font-weight: 700; color: #ffffff;">${formatCurrency(amount)}</span>
-                                <span style="font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${color}40; color: ${color}; text-transform: propercase;">${attribution}</span>
-                            </div>
-                            <div style="font-size: 0.62rem; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${date} • ${label}</div>
-                        </div>
-                    `;
-                }).join('');
-                list.innerHTML = html;
-            }
-        }
-    }
-
-    function clearNotificationHistory(type) {
-        const typeData = window.lastNotificationData[type] || [];
-        try {
-            localStorage.setItem(`seen_count_${type}_${CURRENT_MONTH}`, typeData.length);
-            localStorage.setItem(`cleared_count_${type}_${CURRENT_MONTH}`, typeData.length);
-        } catch (e) { console.warn("Storage write blocked", e); }
-        updateNotificationBadge(type, typeData);
-        // Hide dropdown
-        document.querySelectorAll('.notification-dropdown').forEach(d => d.classList.remove('show'));
-    }
-
-    // ── Expense notification push ─────────────────────────────────────────────
-    const _notifLog = [];   // in-memory store, max 20 entries
-
-    function pushExpenseNotification({ item, amount, date, credit, month }) {
-        // Build a readable time string
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
-        // Re-use the icon system if available
-        const icon = (typeof getIconForItem === 'function' ? getIconForItem(item) : '') || '💰';
-        // Strip the text label from icon string (keep only emoji)
-        const emoji = icon.split(' ')[0] || '💰';
-
-        const formattedAmount = formatCurrency(amount);
-        const displayDate = date ? (() => {
-            try { const d = new Date(date); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]}`; } catch { return date; }
-        })() : month;
-
-        const entry = { emoji, item, formattedAmount, displayDate, credit, timeStr };
-        _notifLog.unshift(entry);
-        if (_notifLog.length > 20) _notifLog.length = 20;   // cap at 20
-
-        // Render into both dashboard & reports notification lists
-        ['dashboard', 'reports'].forEach(type => {
+    function renderLatestNotificationDropdown() {
+        const types = ['dashboard', 'reports'];
+        types.forEach(type => {
             const list = document.getElementById(`${type}-notification-list`);
             if (!list) return;
 
-            const row = document.createElement('div');
-            row.className = 'notif-entry';
-            row.style.cssText = `
-                display: flex; align-items: center; gap: 8px;
-                padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.07);
-                animation: notif-slide-in 0.35s ease;
-            `;
-            row.innerHTML = `
-                <span style="font-size:1.4rem;line-height:1;">${emoji}</span>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${item || 'New Expense'}
+            if (!_latestNotification) {
+                list.innerHTML = `
+                    <div style="padding: 16px 12px; font-size: 0.75rem; text-align: center; color: var(--text-secondary, #94a3b8);">
+                        <i class="fas fa-bell-slash mb-2" style="font-size: 1.4rem; display: block; opacity: 0.4;"></i>
+                        No new notifications.
                     </div>
-                    <div style="font-size:0.7rem;opacity:0.7;">${displayDate} &bull; ${timeStr}</div>
-                    ${credit ? `<div style="font-size:0.7rem;opacity:0.6;font-style:italic;">${credit}</div>` : ''}
+                `;
+                return;
+            }
+
+            const notif = _latestNotification;
+            const isUpdated = notif.action === 'updated';
+            const badgeColor = isUpdated ? '#f59e0b' : '#10b981';
+            const badgeLabel = isUpdated ? 'Updated' : 'New Item';
+            const userAttribution = (notif.user || 'Web App').toLowerCase().includes('admin') ? 'By Admin' : 'By User';
+            const userColor = (notif.user || 'Web App').toLowerCase().includes('admin') ? '#ef4444' : '#3b82f6';
+
+            let detailsHtml = '';
+            if (notif.amount !== undefined && notif.amount !== null && notif.amount !== '') {
+                detailsHtml = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                        <span style="font-size: 0.85rem; font-weight: 800; color: #4cc9f0;">${formatCurrency(notif.amount)}</span>
+                        <span style="font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: ${badgeColor}25; color: ${badgeColor}; text-transform: uppercase;">${badgeLabel}</span>
+                    </div>
+                    <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-primary, #fff); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${notif.item || 'Expense Entry'}
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--text-secondary, #94a3b8); display: flex; justify-content: space-between;">
+                        <span>${notif.date || notif.displayDate || ''} • ${notif.timeStr || ''}</span>
+                        <span style="color: ${userColor}; font-weight: 600;">${userAttribution}</span>
+                    </div>
+                    ${notif.credit ? `<div style="font-size: 0.65rem; color: #cbd5e1; font-style: italic; margin-top: 2px;">${notif.credit}</div>` : ''}
+                `;
+            } else {
+                detailsHtml = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                        <span style="font-size: 0.8rem; font-weight: 800; color: #10b981;">Catalog Item</span>
+                        <span style="font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #10b98125; color: #10b981; text-transform: uppercase;">${badgeLabel}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary, #fff); margin-bottom: 2px;">
+                        ${notif.item}
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--text-secondary, #94a3b8); display: flex; justify-content: space-between;">
+                        <span>Category: ${notif.category || 'General'}</span>
+                        <span>${notif.timeStr || ''}</span>
+                    </div>
+                `;
+            }
+
+            list.innerHTML = `
+                <div class="clear-notifications-header" style="padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                    <span style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.6;">Last Updated Item</span>
+                    <button onclick="clearNotificationHistory()" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); font-size: 0.58rem; font-weight: 700; padding: 1px 7px; border-radius: 99px; cursor: pointer;">
+                        Clear
+                    </button>
                 </div>
-                <span style="font-weight:800;font-size:0.85rem;color:#4cc9f0;white-space:nowrap;">${formattedAmount}</span>
+                <div class="notification-item" style="padding: 10px 12px; background: rgba(255,255,255,0.02);">
+                    ${detailsHtml}
+                </div>
             `;
-            list.prepend(row);
         });
-
-        // Bump badge on dashboard bell
-        const badge = document.getElementById('dashboard-notification-count');
-        if (badge) {
-            const cur = parseInt(badge.textContent, 10) || 0;
-            badge.textContent = cur + 1;
-            badge.style.display = 'inline-flex';
-            // Pop animation
-            badge.style.transform = 'scale(1.6)';
-            setTimeout(() => { badge.style.transform = ''; }, 300);
-        }
-
-        // Also bump reports badge
-        const reportsBadge = document.getElementById('reports-notification-count');
-        if (reportsBadge) {
-            const cur = parseInt(reportsBadge.textContent, 10) || 0;
-            reportsBadge.textContent = cur + 1;
-            reportsBadge.style.display = 'inline-flex';
-        }
     }
 
-    // Inject keyframe for notification slide-in once
-    (function injectNotifStyle() {
-        if (document.getElementById('_notif-style')) return;
-        const s = document.createElement('style');
-        s.id = '_notif-style';
-        s.textContent = `
-            @keyframes notif-slide-in {
-                from { opacity: 0; transform: translateY(-8px); }
-                to   { opacity: 1; transform: translateY(0); }
+    function updateNotificationCountBadges(count) {
+        ['dashboard', 'reports'].forEach(type => {
+            const badge = document.getElementById(`${type}-notification-count`);
+            if (badge) {
+                badge.textContent = (count || 0).toString();
+                badge.style.display = count > 0 ? 'inline-flex' : 'none';
             }
-            .notification-badge {
-                transition: transform 0.3s cubic-bezier(.4,2,.6,1);
-            }
-        `;
-        document.head.appendChild(s);
-    })();
-    // ─────────────────────────────────────────────────────────────────────────
+        });
+    }
 
+    function updateNotificationBadge(type, data) {
+        // Obsolete legacy historical dumper: No-op so past records never pollute notifications
+        return;
+    }
+
+    function clearNotificationHistory(type) {
+        _latestNotification = null;
+        _hasUnreadNotification = false;
+        updateNotificationCountBadges(0);
+        renderLatestNotificationDropdown();
+        document.querySelectorAll('.notification-dropdown').forEach(d => d.classList.remove('show'));
+    }
+
+    function pushExpenseNotification({ item, amount, date, credit, month, action = 'added', user }) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+        const displayDate = date ? (() => {
+            try { 
+                const d = new Date(date); 
+                return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]}`; 
+            } catch { return date; }
+        })() : month;
+
+        // ONLY store and display the single LAST updated/added item
+        _latestNotification = {
+            action: action || 'added',
+            item: item,
+            amount: amount,
+            date: displayDate,
+            credit: credit,
+            user: user || (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Web App'),
+            timeStr: timeStr
+        };
+
+        _hasUnreadNotification = true;
+        renderLatestNotificationDropdown();
+        updateNotificationCountBadges(1);
+
+        // Pop animation on notification bell badge
+        ['dashboard', 'reports'].forEach(type => {
+            const badge = document.getElementById(`${type}-notification-count`);
+            if (badge) {
+                badge.style.transform = 'scale(1.5)';
+                setTimeout(() => { badge.style.transform = ''; }, 300);
+            }
+        });
+    }
+
+    function pushItemNotification({ item, category, action = 'added' }) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+        _latestNotification = {
+            action: action || 'added',
+            item: item,
+            category: category,
+            timeStr: timeStr
+        };
+
+        _hasUnreadNotification = true;
+        renderLatestNotificationDropdown();
+        updateNotificationCountBadges(1);
+
+        ['dashboard', 'reports'].forEach(type => {
+            const badge = document.getElementById(`${type}-notification-count`);
+            if (badge) {
+                badge.style.transform = 'scale(1.5)';
+                setTimeout(() => { badge.style.transform = ''; }, 300);
+            }
+        });
+    }
+
+    // Toggle Notifications dropdown
     function toggleNotifications(type) {
         const dropdown = document.getElementById(`${type}-notification-dropdown`);
         if (!dropdown) return;
@@ -11904,15 +11904,9 @@ Expense Tracker Pro: 2026 JavaScript Code
         if (!isVisible) {
             dropdown.classList.add('show');
 
-            // Mark as seen with safety
-            try {
-                const typeData = window.lastNotificationData[type] || [];
-                localStorage.setItem(`seen_count_${type}_${CURRENT_MONTH}`, typeData.length);
-            } catch (e) { console.warn("Storage restricted in WebView", e); }
-
-            // Reset badge
-            const badge = document.getElementById(`${type}-notification-count`);
-            if (badge) badge.style.display = 'none';
+            // When the notification bar is clicked, reset count to zero
+            _hasUnreadNotification = false;
+            updateNotificationCountBadges(0);
         }
     }
 
@@ -12567,16 +12561,15 @@ Expense Tracker Pro: 2026 JavaScript Code
                     const isEdit = !!uniqueIdValue;
                     showAlert(`Entry ${isEdit ? 'Updated' : 'Created'} Successfully!`);
 
-                    // ── Push a notification for new expense ────────────────
-                    if (!isEdit) {
-                        pushExpenseNotification({
-                            item: itemListValue,
-                            amount: amountValue,
-                            date: dateValue,
-                            credit: creditValue,
-                            month: monthValue
-                        });
-                    }
+                    // ── Push a notification for the last updated or added item ────────────────
+                    pushExpenseNotification({
+                        action: isEdit ? 'updated' : 'added',
+                        item: itemListValue,
+                        amount: amountValue,
+                        date: dateValue,
+                        credit: creditValue,
+                        month: monthValue
+                    });
                     // ──────────────────────────────────────────────────────
 
                     const modalElement = document.getElementById('entryModal');
@@ -13663,6 +13656,12 @@ Expense Tracker Pro: 2026 JavaScript Code
 
                     showAlert(response.message || `Item "${itemName}" added successfully!`, "success");
 
+                    pushItemNotification({
+                        action: 'added',
+                        item: itemName,
+                        category: categoryInput ? categoryInput.value : ''
+                    });
+
                     // Refresh items list in cache
                     if (window.expenseCache) {
                         window.expenseCache.invalidate('items_list');
@@ -14006,6 +14005,10 @@ color: #ffc107 !important;
 
         const dateInput = document.getElementById('date');
         if (dateInput) dateInput.value = `${year}-${month}-${day}`;
+
+        // Initialize notification UI cleanly (0 count, no stale previous items)
+        renderLatestNotificationDropdown();
+        updateNotificationCountBadges(0);
 
         // Check for saved session in localStorage
         const savedUser = localStorage.getItem('currentUser');
