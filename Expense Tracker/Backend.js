@@ -4,7 +4,6 @@ Expense Tracker Pro: 2026 Backend Code
 
 // ✅ Put this at the top of your script (global constants)
 const MAIN_ID = "1WK0QOkrz4c7Fl-wvkLKrH1gPODxkF3stvYajR5lVM0M";
-const CONSOLIDATED_ID = '1lCkNPBkVABweit6dD-3atsP71O0qsBnbuH1rlvzqtV8';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 let currentUser = null; // Track current user for adding items
 
@@ -109,7 +108,26 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
 
+<<<<<<< HEAD
     if (page === 'cleanAllMonths' || page === 'stopIcons' || page === 'syncList' || page === 'updateList' || page === 'fixList' || page === 'cleanListIcons' || page === 'removeDropdowns') {
+        const result = cleanAllColumnEIconsAndStopTriggers();
+        const dropResult = removeDropdownsFromColumnE();
+        return ContentService.createTextOutput(JSON.stringify({ result: result, dropdownResult: dropResult }))
+=======
+    if (page === 'removeDropdowns') {
+        const result = removeDropdownsFromColumnE();
+        return ContentService.createTextOutput(JSON.stringify(result))
+>>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (page === 'removeIcons') {
+        const result = removeIconsFromColumnE();
+        return ContentService.createTextOutput(JSON.stringify(result))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (page === 'cleanAllMonths' || page === 'stopIcons' || page === 'syncList' || page === 'updateList' || page === 'fixList' || page === 'cleanListIcons') {
         const result = cleanAllColumnEIconsAndStopTriggers();
         const dropResult = removeDropdownsFromColumnE();
         return ContentService.createTextOutput(JSON.stringify({ result: result, dropdownResult: dropResult }))
@@ -198,9 +216,9 @@ function include(filename) {
 }
 
 /**
-* Fetches all data from the Data sheet for the reports page in the same format as All Reports.
-* @returns {Object} An object containing all expenses with proper formatting.
-*/
+ * Loads app expense data from the month tabs, the canonical storage for the web app.
+ * @returns {Object} All expenses and unique item names in report format.
+ */
 function getAllData() {
     try {
         let allExpenses = [];
@@ -315,9 +333,8 @@ function getAllData() {
             }
         };
 
-        // Load from both Master (All Years) and current Data sheet
-        loadFromSource(CONSOLIDATED_ID, "Master");
-        loadFromSource(MAIN_ID, "Data");
+        // Month tabs are the source of truth for web app reporting.
+        MONTHS.forEach(month => loadFromSource(MAIN_ID, month));
 
         // Sort by date (newest first)
         allExpenses.sort((a, b) => {
@@ -349,9 +366,9 @@ function getAllData() {
 }
 
 /**
-* Fetches all consolidated data from the "Master" sheet for the All Data page.
-* @returns {Array<Array<any>>} The consolidated data or an empty array.
-*/
+ * Formats canonical month-tab data for the All Data page.
+ * @returns {Array<Array<any>>} The consolidated data or an empty array.
+ */
 function getConsolidatedData() {
     try {
         // First, get the data from getAllData which formats it properly
@@ -955,6 +972,7 @@ function restoreEntry(uniqueId) {
         const trashRow = trashData[rowIdx];
         const origMonth = String(trashRow[10]).trim(); // col 11 = Original Month
         const origRowData = trashRow.slice(0, 8);       // cols 1-8 = original entry
+        origRowData[4] = stripEmojiIcon(origRowData[4]);
 
         // ── Restore to original month sheet ───────────────────────────────────
         const destSheet = ensureSheetExists(ss, origMonth, [
@@ -1241,12 +1259,6 @@ function ensureListSheet() {
             ]);
         });
 
-        // Update validation rules across the spreadsheet
-        try {
-            updateDataValidationForItemList();
-        } catch (e) {
-            Logger.log('Validation update error: ' + e.message);
-        }
     }
 
     // Auto-enrich any items missing emoji icons or categories in the List sheet
@@ -1573,12 +1585,6 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
                 });
             }
 
-            // Refresh validation rules
-            try {
-                updateDataValidationForItemList();
-            } catch (e) {
-                Logger.log('Validation update error: ' + e.message);
-            }
         }
 
         if (itemsToAppend.length > 0) {
@@ -1586,11 +1592,6 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
                 listSheet.appendRow(row);
             });
             Logger.log('Appended ' + itemsToAppend.length + ' mandatory missing items.');
-            try {
-                updateDataValidationForItemList();
-            } catch (e) {
-                Logger.log('Validation update error: ' + e.message);
-            }
         }
 
         return {
@@ -1798,64 +1799,22 @@ function deduplicateAndRenumberListSheet(ss, listSheet) {
 
 function getYearlyData(year) {
     try {
-        const ss = SpreadsheetApp.openById(CONSOLIDATED_ID);
-        const sheet = ss.getSheetByName("Master");
-        if (!sheet) {
-            return { error: "Sheet 'Master' not found." };
-        }
-
         let yearlyData = {};
         let yearlyTotal = 0;
 
         // Initialize all months to 0
         MONTHS.forEach(month => yearlyData[month] = 0);
 
-        const dataRange = sheet.getDataRange();
-        if (dataRange.getNumRows() <= 1) {
-            return yearlyData; // no data
-        }
+        const allDataResult = getAllData();
+        if (allDataResult.error) return { error: allDataResult.error };
 
-        const values = dataRange.getValues().slice(1); // exclude header row
-
-        values.forEach(row => {
-            const dateCell = row[2];   // Column C = Date
-            const amountCell = row[5]; // Column F = Amount
-
-            if (dateCell && amountCell) {
-                let rowDate = dateCell;
-
-                // Convert to Date object if it's a string
-                if (!(rowDate instanceof Date)) {
-                    if (typeof rowDate === 'string') {
-                        // Try to parse the date string
-                        const dateMatch = rowDate.toString().match(/^(\w+)\s+(\d+)(?:\s+(\d{4}))?/);
-                        if (dateMatch) {
-                            const monthName = dateMatch[1].substring(0, 3);
-                            const day = parseInt(dateMatch[2]);
-                            const yearFromString = dateMatch[3] || new Date().getFullYear();
-                            const monthIndex = MONTHS.findIndex(m =>
-                                m.toLowerCase() === monthName.toLowerCase()
-                            );
-
-                            if (monthIndex !== -1) {
-                                rowDate = new Date(parseInt(yearFromString), monthIndex, day);
-                            }
-                        } else {
-                            // Try standard Date parsing
-                            rowDate = new Date(rowDate);
-                        }
-                    }
-                }
-
-                // Check if date is valid and matches target year
-                if (rowDate instanceof Date && !isNaN(rowDate.getTime()) && rowDate.getFullYear().toString() === year) {
-                    const monthName = MONTHS[rowDate.getMonth()];
-                    const amount = parseFloat(amountCell) || 0;
-
-                    yearlyData[monthName] += amount;
-                    yearlyTotal += amount;
-                }
-            }
+        (allDataResult.allExpenses || []).forEach(expense => {
+            if (expense[5] !== String(year)) return;
+            const month = expense[1];
+            if (!MONTHS.includes(month)) return;
+            const amount = parseFloat(expense[3]) || 0;
+            yearlyData[month] += amount;
+            yearlyTotal += amount;
         });
 
         yearlyData["Total"] = yearlyTotal;
@@ -2010,38 +1969,17 @@ function getYearlyReport(year) {
 }
 
 /**
-* Gets available years from consolidated Master sheet
-* @returns {Array<string>} Array of available years
-*/
+ * Gets available years from the canonical month tabs.
+ * @returns {Array<string>} Array of available years.
+ */
 function getAvailableYears() {
     try {
-        const ss = SpreadsheetApp.openById(MAIN_ID);
-        const dataSheet = ss.getSheetByName("Data");
-        if (!dataSheet) {
-            return [new Date().getFullYear().toString()];
-        }
-
-        const dataRange = dataSheet.getDataRange();
-        if (dataRange.getNumRows() <= 1) {
-            return [new Date().getFullYear().toString()];
-        }
-
-        const values = dataRange.getValues().slice(1);
+        const allDataResult = getAllData();
+        if (allDataResult.error) throw new Error(allDataResult.error);
         const yearsSet = new Set();
 
-        values.forEach(row => {
-            const dateCell = row[2]; // Date column in "Data" sheet
-            if (dateCell) {
-                if (dateCell instanceof Date && !isNaN(dateCell.getTime())) {
-                    yearsSet.add(dateCell.getFullYear().toString());
-                } else if (typeof dateCell === 'string') {
-                    // Try to extract year from date string
-                    const yearMatch = dateCell.toString().match(/\b(\d{4})\b/);
-                    if (yearMatch) {
-                        yearsSet.add(yearMatch[1]);
-                    }
-                }
-            }
+        (allDataResult.allExpenses || []).forEach(expense => {
+            if (expense[5]) yearsSet.add(String(expense[5]));
         });
 
         // Add current year if no data found
@@ -2232,9 +2170,6 @@ function addItemToList(itemName, category) {
             currentUser ? currentUser.name : "Web App"
         ]);
 
-        // Update data validation across all month sheets
-        updateDataValidationForItemList();
-
         return {
             success: true,
             message: `"${finalItemName}" Added Successfully 2 List!`,
@@ -2251,8 +2186,13 @@ function addItemToList(itemName, category) {
 }
 
 /**
+<<<<<<< HEAD
  * Removes data validation dropdowns from Column E (Item List) across all month sheets
  * (Jan to Dec) and the Data sheet so that only text remains without dropdowns.
+=======
+ * Removes data validation dropdowns from the full data portion of Column E
+ * across all month sheets (Jan to Dec) and the Data sheet.
+>>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
  */
 function removeDropdownsFromColumnE() {
     try {
@@ -2263,11 +2203,19 @@ function removeDropdownsFromColumnE() {
             try {
                 const sheet = ss.getSheetByName(month);
                 if (sheet) {
+<<<<<<< HEAD
                     const lastRow = sheet.getLastRow();
                     if (lastRow > 1) {
                         const itemListRange = sheet.getRange(2, 5, lastRow - 1, 1);
                         itemListRange.clearDataValidations();
                         results[month] = { rows: lastRow - 1, dropdownsRemoved: true };
+=======
+                    const rowCount = sheet.getMaxRows() - 1;
+                    if (rowCount > 0) {
+                        const itemListRange = sheet.getRange(2, 5, rowCount, 1);
+                        itemListRange.clearDataValidations();
+                        results[month] = { rows: rowCount, dropdownsRemoved: true };
+>>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
                     }
                 }
             } catch (mErr) {
@@ -2280,11 +2228,19 @@ function removeDropdownsFromColumnE() {
         try {
             const dataSheet = ss.getSheetByName("Data");
             if (dataSheet) {
+<<<<<<< HEAD
                 const lastRow = dataSheet.getLastRow();
                 if (lastRow > 1) {
                     const dataRange = dataSheet.getRange(2, 5, lastRow - 1, 1);
                     dataRange.clearDataValidations();
                     results["Data"] = { rows: lastRow - 1, dropdownsRemoved: true };
+=======
+                const rowCount = dataSheet.getMaxRows() - 1;
+                if (rowCount > 0) {
+                    const dataRange = dataSheet.getRange(2, 5, rowCount, 1);
+                    dataRange.clearDataValidations();
+                    results["Data"] = { rows: rowCount, dropdownsRemoved: true };
+>>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
                 }
             }
         } catch (dErr) {
@@ -2301,6 +2257,59 @@ function removeDropdownsFromColumnE() {
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Removes leading emoji/icons from the Item List column on each month sheet and Data.
+ */
+function removeIconsFromColumnE() {
+    try {
+        const ss = SpreadsheetApp.openById(MAIN_ID);
+        const results = {};
+        const sheetNames = MONTHS.concat(['Data']);
+
+        sheetNames.forEach(sheetName => {
+            const sheet = ss.getSheetByName(sheetName);
+            if (!sheet) return;
+
+            if (String(sheet.getRange(1, 5).getDisplayValue()).trim() !== 'Item List') {
+                results[sheetName] = { skipped: true, reason: 'Column E header is not Item List' };
+                return;
+            }
+
+            const lastRow = sheet.getLastRow();
+            if (lastRow <= 1) {
+                results[sheetName] = { rowsChecked: 0, iconsRemoved: 0 };
+                return;
+            }
+
+            const itemListRange = sheet.getRange(2, 5, lastRow - 1, 1);
+            const values = itemListRange.getValues();
+            let iconsRemoved = 0;
+
+            values.forEach(row => {
+                const original = row[0];
+                if (original === '' || original === null) return;
+                const cleaned = stripEmojiIcon(original);
+                if (cleaned !== String(original).trim()) {
+                    row[0] = cleaned;
+                    iconsRemoved++;
+                }
+            });
+
+            if (iconsRemoved > 0) itemListRange.setValues(values);
+            results[sheetName] = { rowsChecked: values.length, iconsRemoved };
+        });
+
+        SpreadsheetApp.flush();
+        return { success: true, results };
+    } catch (error) {
+        Logger.log('Error Removing Icons From Column E: ' + error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+>>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
  * Dropdowns removed per user requirement: clear validations to ensure Column E remains plain text only
  */
 function updateDataValidationForItemList() {
@@ -2439,22 +2448,10 @@ function addExpenseEntry(entryData) {
 */
 function getSummaryData(year) {
     try {
-        const ss = SpreadsheetApp.openById(CONSOLIDATED_ID);
-        const sheet = ss.getSheetByName("Master");
-
-        let rows = [];
-        if (sheet && sheet.getLastRow() > 1) {
-            rows = sheet.getDataRange().getValues().slice(1);
-        } else {
-            MONTHS.forEach(m => {
-                const mSheet = ss.getSheetByName(m);
-                if (mSheet && mSheet.getLastRow() > 1) {
-                    rows = rows.concat(mSheet.getDataRange().getValues().slice(1));
-                }
-            });
-        }
-
-        if (rows.length === 0) return getEmptySummary();
+        const allDataResult = getAllData();
+        if (allDataResult.error) return { error: allDataResult.error };
+        const expenses = allDataResult.allExpenses || [];
+        if (expenses.length === 0) return getEmptySummary();
 
         // Use passed year or default to current year
         const targetYear = (year && year !== 'all') ? year.toString() : new Date().getFullYear().toString();
@@ -2465,39 +2462,14 @@ function getSummaryData(year) {
         const paymentMethods = { 'Credit': 0, 'Cash': 0 };
         const yearlyCategoryCounts = {};
 
-        rows.forEach(row => {
-            const amount = parseFloat(row[5]) || 0;
-            const dateStr = row[2];
-            const month = row[3];
-            const category = row[4] || "Uncategorized";
+        expenses.forEach(expense => {
+            const amount = parseFloat(expense[3]) || 0;
+            const month = expense[1];
+            const category = expense[2] || "Uncategorized";
 
-            const creditStr = String(row[6] || '').toLowerCase();
+            const creditStr = String(expense[4] || '').toLowerCase();
             const credit = (creditStr.includes('✓') || creditStr.includes('credit')) ? 'Credit' : 'Cash';
-
-            // Parse date to check year (Robust logic)
-            let rowYear;
-            if (dateStr instanceof Date && !isNaN(dateStr.getTime())) {
-                rowYear = dateStr.getFullYear().toString();
-            } else {
-                // Try parsing string
-                const dStr = String(dateStr);
-                const dateMatch = dStr.match(/^(\w+)\s+(\d+)(?:\s+(\d{4}))?/);
-                if (dateMatch && dateMatch[3]) {
-                    rowYear = dateMatch[3];
-                } else {
-                    // Check Tracker Name (Index 8) for year if date string doesn't have it
-                    const trackerName = row[8] || ''; // Index 8 is Tracker Name
-                    const yearMatch = trackerName && typeof trackerName === 'string' ? trackerName.match(/(\d{4})/) : null;
-
-                    if (yearMatch) {
-                        rowYear = yearMatch[1];
-                    } else {
-                        // Fallback to standard 
-                        const d = new Date(dStr);
-                        rowYear = !isNaN(d.getTime()) ? d.getFullYear().toString() : new Date().getFullYear().toString();
-                    }
-                }
-            }
+            const rowYear = expense[5];
 
             if (rowYear === targetYear) {
                 totalAmount += amount;
@@ -2588,48 +2560,16 @@ function getEmptySummary() {
 */
 function getGraphsData(type, year, user) {
     try {
-        const ss = SpreadsheetApp.openById(CONSOLIDATED_ID);
-        const sheet = ss.getSheetByName("Master");
-        if (!sheet) return {}; // Return empty structure
-
-        const data = sheet.getDataRange().getValues();
-        const rows = data.slice(1);
-
-        // Filter rows
-        const filteredRows = rows.filter(row => {
-            const dateStr = row[2];
-            // Robust Year Parsing
-            let rowYear;
-            if (dateStr instanceof Date && !isNaN(dateStr.getTime())) {
-                rowYear = dateStr.getFullYear().toString();
-            } else {
-                const dStr = String(dateStr);
-                const dateMatch = dStr.match(/^(\w+)\s+(\d+)(?:\s+(\d{4}))?/);
-                if (dateMatch && dateMatch[3]) {
-                    rowYear = dateMatch[3];
-                } else {
-                    // Check Tracker Name (Index 8) for year if date string doesn't have it
-                    const trackerName = row[8] || '';
-                    const yearMatch = trackerName && typeof trackerName === 'string' ? trackerName.match(/(\d{4})/) : null;
-
-                    if (yearMatch) {
-                        rowYear = yearMatch[1];
-                    } else {
-                        const d = new Date(dStr);
-                        rowYear = !isNaN(d.getTime()) ? d.getFullYear().toString() : new Date().getFullYear().toString();
-                    }
-                }
-            }
-
-            return rowYear === year;
-        });
+        const allDataResult = getAllData();
+        if (allDataResult.error) return { error: allDataResult.error };
+        const filteredRows = (allDataResult.allExpenses || []).filter(expense => expense[5] === String(year));
 
         // 1. Main Chart (Monthly Trend)
         const monthlyData = new Array(12).fill(0);
         MONTHS.forEach((m, i) => {
             monthlyData[i] = filteredRows
-                .filter(r => r[3] === m)
-                .reduce((sum, r) => sum + (parseFloat(r[5]) || 0), 0);
+                .filter(r => r[1] === m)
+                .reduce((sum, r) => sum + (parseFloat(r[3]) || 0), 0);
         });
 
         const mainChart = {
@@ -2647,8 +2587,8 @@ function getGraphsData(type, year, user) {
         // 2. Pie Chart (Category)
         const catTotals = {};
         filteredRows.forEach(r => {
-            const cat = r[4] || 'Other';
-            catTotals[cat] = (catTotals[cat] || 0) + (parseFloat(r[5]) || 0);
+            const cat = r[2] || 'Other';
+            catTotals[cat] = (catTotals[cat] || 0) + (parseFloat(r[3]) || 0);
         });
         const pieChart = {
             labels: Object.keys(catTotals),

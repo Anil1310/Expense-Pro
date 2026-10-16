@@ -5324,6 +5324,10 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             position: relative !important;
         }
 
+        #dashboard-page .table-responsive {
+            max-height: max(140px, min(50vh, calc(100dvh - 360px))) !important;
+        }
+
         #reports-page .table-responsive {
             min-height: calc(100vh - 365px) !important;
             min-height: calc(100dvh - 365px) !important;
@@ -7568,15 +7572,19 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         }
 
         #pdfPreviewModal .modal-body {
-            flex: 1 1 100% !important;
+            flex: 1 1 0% !important;
+            min-height: 0 !important;
             height: auto !important;
             width: 100vw !important;
             overflow: hidden !important;
             background: #ffffff !important;
-            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            padding: 0 !important;
         }
 
         #pdfPreviewModal #pdfPreviewIframe {
+            display: block !important;
+            flex: 1 1 0% !important;
+            min-height: 0 !important;
             width: 100% !important;
             height: 100% !important;
             border: none !important;
