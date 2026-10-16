@@ -14,13 +14,13 @@ let currentUser = null; // Track current user for adding items
 function stripEmojiIcon(text) {
     if (!text) return "";
     var str = text.toString().trim();
-    // 1. Remove all surrogate pairs and unicode symbols/pictographs from start
-    str = str.replace(/^[\s\uD800-\uDBFF\uDC00-\uDFFF\u2600-\u27BF\uFE00-\uFE0F\u200D\u2000-\u206F\u2B50\u231A-\u23FA\u25A0-\u25FF\u2B00-\u2BFF\u2190-\u21FF\u2300-\u23FF\u2900-\u297F]+/, '');
-    // 2. Remove any remaining non-word symbols at the beginning before alphanumeric characters
-    str = str.replace(/^[^\w\s"'(+\-\u0900-\u097F]+/u, '');
     try {
-        str = str.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji}\s]+/u, '');
+        str = str.replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji}]/gu, '');
     } catch (e) {}
+    str = str.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '');
+    str = str.replace(/[\u2600-\u27BF\uFE00-\uFE0F\u200D\u2B50\u231A-\u23FA\u25A0-\u25FF\u2B00-\u2BFF\u2190-\u21FF\u2300-\u23FF\u2900-\u297F]/g, '');
+    str = str.replace(/^[^\w\s"'(+\-\u0900-\u097F]+/u, '');
+    str = str.replace(/\s+/g, ' ');
     return str.trim();
 }
 
@@ -1697,9 +1697,12 @@ function cleanAllColumnEIconsAndStopTriggers() {
                         eRange.setValues(eVals);
                         totalCleanedColE += colEChanged;
                     }
-                    // Clear any data validation dropdowns on Column E
+                    // Clear any data validation dropdowns on Column E across all rows
                     try {
-                        eRange.clearDataValidations();
+                        var maxR = sheet.getMaxRows();
+                        if (maxR > 1) {
+                            sheet.getRange(2, 5, maxR - 1, 1).clearDataValidations();
+                        }
                     } catch (cErr) {}
                 }
 
@@ -2258,44 +2261,94 @@ function removeDropdownsFromColumnE() {
     try {
         const ss = SpreadsheetApp.openById(MAIN_ID);
         const results = {};
+        let totalIconsCleaned = 0;
 
-        MONTHS.forEach(month => {
-            try {
-                const sheet = ss.getSheetByName(month);
-                if (sheet) {
-                    const lastRow = sheet.getLastRow();
-                    if (lastRow > 1) {
-                        const itemListRange = sheet.getRange(2, 5, lastRow - 1, 1);
-                        itemListRange.clearDataValidations();
-                        results[month] = { rows: lastRow - 1, dropdownsRemoved: true };
-                    }
+        // 1. Delete any project triggers to stop automatic recreation of dropdowns/icons
+        const removedTriggers = [];
+        try {
+            const triggers = ScriptApp.getProjectTriggers();
+            triggers.forEach(function(t) {
+                removedTriggers.push({
+                    id: t.getUniqueId(),
+                    handler: t.getHandlerFunction(),
+                    type: t.getEventType().toString()
+                });
+                try {
+                    ScriptApp.deleteTrigger(t);
+                } catch (te) {
+                    Logger.log('Error deleting trigger: ' + te.message);
                 }
-            } catch (mErr) {
-                Logger.log('Error clearing dropdowns for ' + month + ': ' + mErr.message);
-                results[month] = { error: mErr.message };
+            });
+        } catch (trigErr) {
+            Logger.log('Trigger inspection notice: ' + trigErr.message);
+        }
+
+        // 2. Process all sheets in the spreadsheet
+        const sheets = ss.getSheets();
+        sheets.forEach(sheet => {
+            try {
+                if (typeof sheet.getType === 'function' && sheet.getType() !== SpreadsheetApp.SheetType.GRID) {
+                    return;
+                }
+                const name = sheet.getName();
+                const lastRow = sheet.getLastRow();
+                const maxRows = sheet.getMaxRows();
+                const lastCol = sheet.getLastColumn();
+
+                // Target monthly sheets 1-12 (Jan-Dec), Data, and related expense sheets
+                const isTargetSheet = MONTHS.indexOf(name) !== -1 ||
+                    /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(name) ||
+                    /^(month\s*\d+|\d+)$/i.test(name) ||
+                    name === 'Data' || name === 'Data1' || name === 'Salary' || name === 'Monthly';
+
+                if (isTargetSheet && lastCol >= 5) {
+                    // A. Clear data validation dropdowns across ALL rows in Column E (row 2 to max)
+                    if (maxRows > 1) {
+                        sheet.getRange(2, 5, maxRows - 1, 1).clearDataValidations();
+                    }
+
+                    // B. Clean all icons/emojis from Column E so pure text remains
+                    let cleanedInSheet = 0;
+                    if (lastRow > 1) {
+                        const eRange = sheet.getRange(2, 5, lastRow - 1, 1);
+                        const eVals = eRange.getValues();
+                        for (let r = 0; r < eVals.length; r++) {
+                            const raw = (eVals[r][0] || '').toString().trim();
+                            if (!raw) continue;
+                            const clean = stripEmojiIcon(raw);
+                            if (clean !== raw) {
+                                eVals[r][0] = clean;
+                                cleanedInSheet++;
+                            }
+                        }
+                        if (cleanedInSheet > 0) {
+                            eRange.setValues(eVals);
+                            totalIconsCleaned += cleanedInSheet;
+                        }
+                    }
+
+                    results[name] = {
+                        maxRows: maxRows,
+                        lastRow: lastRow,
+                        dropdownsRemoved: true,
+                        iconsCleaned: cleanedInSheet
+                    };
+                }
+            } catch (sErr) {
+                Logger.log('Error processing sheet ' + sheet.getName() + ': ' + sErr.message);
+                results[sheet.getName()] = { error: sErr.message };
             }
         });
 
-        // Also Data sheet
-        try {
-            const dataSheet = ss.getSheetByName("Data");
-            if (dataSheet) {
-                const lastRow = dataSheet.getLastRow();
-                if (lastRow > 1) {
-                    const dataRange = dataSheet.getRange(2, 5, lastRow - 1, 1);
-                    dataRange.clearDataValidations();
-                    results["Data"] = { rows: lastRow - 1, dropdownsRemoved: true };
-                }
-            }
-        } catch (dErr) {
-            Logger.log('Error clearing dropdowns for Data sheet: ' + dErr.message);
-            results["Data"] = { error: dErr.message };
-        }
-
-        Logger.log('Dropdowns removed from Column E in all month sheets and Data sheet');
-        return { success: true, results: results };
+        Logger.log('Dropdowns and icons removed from Column E in all monthly sheets.');
+        return {
+            success: true,
+            totalIconsCleaned: totalIconsCleaned,
+            removedTriggers: removedTriggers,
+            results: results
+        };
     } catch (error) {
-        Logger.log('Error Removing Data Validations: ' + error.message);
+        Logger.log('Error Removing Data Validations and Icons: ' + error.message);
         return { success: false, error: error.message };
     }
 }
