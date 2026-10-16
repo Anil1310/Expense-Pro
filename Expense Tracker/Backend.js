@@ -9,6 +9,36 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 let currentUser = null; // Track current user for adding items
 
 /**
+ * Strips emoji icons, pictographs, surrogate pairs, and surrounding whitespace from text.
+ */
+function stripEmojiIcon(text) {
+    if (!text) return "";
+    var str = text.toString().trim();
+    // 1. Remove all surrogate pairs and unicode symbols/pictographs from start
+    str = str.replace(/^[\s\uD800-\uDBFF\uDC00-\uDFFF\u2600-\u27BF\uFE00-\uFE0F\u200D\u2000-\u206F\u2B50\u231A-\u23FA\u25A0-\u25FF\u2B00-\u2BFF\u2190-\u21FF\u2300-\u23FF\u2900-\u297F]+/, '');
+    // 2. Remove any remaining non-word symbols at the beginning before alphanumeric characters
+    str = str.replace(/^[^\w\s"'(+\-\u0900-\u097F]+/u, '');
+    try {
+        str = str.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji}\s]+/u, '');
+    } catch (e) {}
+    return str.trim();
+}
+
+/**
+ * Strips emoji icons from unique ID (e.g. "1- 🍕 Food" -> "1- Food" or "1-Food").
+ */
+function stripEmojiFromUniqueId(uid) {
+    if (!uid) return "";
+    var str = uid.toString().trim();
+    var m = str.match(/^(\d+\s*-\s*)(.*)$/);
+    if (m) {
+        return m[1] + stripEmojiIcon(m[2]);
+    }
+    return stripEmojiIcon(str);
+}
+
+
+/**
  * Logs detailed actions to the Audit__Log sheet for security and tracking.
  */
 function logAction(action, details, uniqueId, user) {
@@ -79,9 +109,10 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
 
-    if (page === 'syncList' || page === 'updateList' || page === 'fixList') {
-        const result = syncAndFixListSheetNow();
-        return ContentService.createTextOutput(JSON.stringify(result))
+    if (page === 'cleanAllMonths' || page === 'stopIcons' || page === 'syncList' || page === 'updateList' || page === 'fixList' || page === 'cleanListIcons' || page === 'removeDropdowns') {
+        const result = cleanAllColumnEIconsAndStopTriggers();
+        const dropResult = removeDropdownsFromColumnE();
+        return ContentService.createTextOutput(JSON.stringify({ result: result, dropdownResult: dropResult }))
             .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -138,7 +169,8 @@ function doPost(e) {
             getYearlyData: (...args) => getYearlyData(...args),
             restoreEntry: (...args) => restoreEntry(...args),
             runCompleteProcess: (...args) => runCompleteProcess(...args),
-            saveProfilePhoto: (...args) => saveProfilePhoto(...args)
+            saveProfilePhoto: (...args) => saveProfilePhoto(...args),
+            cleanAllColumnEIconsAndStopTriggers: (...args) => cleanAllColumnEIconsAndStopTriggers(...args)
         };
 
         if (!request || typeof request.method !== "string" ||
@@ -465,7 +497,8 @@ function parseDateString(dateStr, year) {
 * @returns {string} The formatted unique ID
 */
 function generateUniqueId(sn, itemList) {
-    const cleanItem = itemList.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
+    const clean = stripEmojiIcon(itemList);
+    const cleanItem = (clean || itemList).split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
     return `${sn}-${cleanItem}`;
 }
 
@@ -586,6 +619,9 @@ function addEntry(entryData) {
             return updateEntry(entryData);
         }
 
+        // Sanitize item list to ensure no emoji/icons are ever saved
+        entryData.itemList = stripEmojiIcon(entryData.itemList);
+
         // Parse the date safely to prevent timezone shifts
         let date;
         if (typeof entryData.date === 'string' && entryData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -687,6 +723,10 @@ function getEntryByUniqueId(uniqueId, month) {
 */
 function updateEntry(entryData) {
     try {
+        // Sanitize itemList and uniqueId to ensure no emoji/icons are saved
+        if (entryData.itemList) entryData.itemList = stripEmojiIcon(entryData.itemList);
+        if (entryData.uniqueId) entryData.uniqueId = stripEmojiFromUniqueId(entryData.uniqueId);
+
         // Parse the date safely to prevent timezone shifts
         let date;
         if (typeof entryData.date === 'string' && entryData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -1142,7 +1182,7 @@ function ensureListSheet() {
     }
 
     // Check for new categories (e.g. 🍎 Fruit) or if list has 7 or fewer rows (old default template)
-    const hasFruit = values.some(item => item && (item.includes('🍎 Fruit') || item.includes('Fruit')));
+    const hasFruit = values.some(item => item && item.includes('Fruit'));
 
     if (!hasFruit || values.length <= 7) {
         // Clear all data rows except header
@@ -1151,44 +1191,44 @@ function ensureListSheet() {
         }
 
         const newItems = [
-            ['🍎 Fruit', 'Food'],
-            ['🍕 Food', 'Food'],
-            ['🥤 Coldrink', 'Food'],
-            ['🛺 Auto', 'Transport'],
-            ['🚇 Metro', 'Transport'],
-            ['🍦 Ice Cream', 'Food'],
-            ['🥦 Vegetables', 'Food'],
-            ['🥛 Milk', 'Food'],
-            ['🍿 Snacks', 'Food'],
-            ['🛒 Grocery', 'Food'],
-            ['💊 Medicine', 'Medical'],
-            ['🩺 Doctor Fees', 'Medical'],
-            ['💊 Medicines', 'Medical'],
-            ['🔬 Pathology Test', 'Medical'],
-            ['🚼 Baby Diaper', 'Baby Care'],
-            ['🍼 Bottle', 'Baby Care'],
-            ['👶 Rudra Baby 6 Months', 'Baby Care'],
-            ['🪔 Durga Pooja', 'Festivals'],
-            ['🪔 Diwali', 'Festivals'],
-            ['🎨 Holi', 'Festivals'],
-            ['🌕 Karvachauth', 'Festivals'],
-            ['🏫 School Stationary', 'Education'],
-            ['🪭 Fan', 'Electronics'],
-            ['🪭 Electric Fan', 'Electronics'],
-            ['📺 TV', 'Electronics'],
-            ['🧪 Medical Test', 'Medical'],
-            ['🏥 ICU Care', 'Medical'],
-            ['⛽ Petrol', 'Transport'],
-            ['🥤 Juice', 'Food'],
-            ['💇 Hair Color', 'Personal Care'],
-            ['✂️ Hair Cut', 'Personal Care'],
-            ['📱 Recharge', 'Bills'],
-            ['🛍️ Shopping', 'Shopping'],
-            ['🤖 AI', 'Other'],
-            ['🏠Room Rent', 'Bills'],
-            ['🔥 Lighter', 'Other'],
-            ['🏠10000 Rent+3000 Security', 'Bills'],
-            ['🧺 Surf', 'Personal Care']
+            ['Fruit', 'Food'],
+            ['Food', 'Food'],
+            ['Coldrink', 'Food'],
+            ['Auto', 'Transport'],
+            ['Metro', 'Transport'],
+            ['Ice Cream', 'Food'],
+            ['Vegetables', 'Food'],
+            ['Milk', 'Food'],
+            ['Snacks', 'Food'],
+            ['Grocery', 'Food'],
+            ['Medicine', 'Medical'],
+            ['Doctor Fees', 'Medical'],
+            ['Medicines', 'Medical'],
+            ['Pathology Test', 'Medical'],
+            ['Baby Diaper', 'Baby Care'],
+            ['Bottle', 'Baby Care'],
+            ['Rudra Baby 6 Months', 'Baby Care'],
+            ['Durga Pooja', 'Festivals'],
+            ['Diwali', 'Festivals'],
+            ['Holi', 'Festivals'],
+            ['Karvachauth', 'Festivals'],
+            ['School Stationary', 'Education'],
+            ['Fan', 'Electronics'],
+            ['Electric Fan', 'Electronics'],
+            ['TV', 'Electronics'],
+            ['Medical Test', 'Medical'],
+            ['ICU Care', 'Medical'],
+            ['Petrol', 'Transport'],
+            ['Juice', 'Food'],
+            ['Hair Color', 'Personal Care'],
+            ['Hair Cut', 'Personal Care'],
+            ['Recharge', 'Bills'],
+            ['Shopping', 'Shopping'],
+            ['AI', 'Other'],
+            ['Room Rent', 'Bills'],
+            ['Lighter', 'Other'],
+            ['10000 Rent+3000 Security', 'Bills'],
+            ['Surf', 'Personal Care']
         ];
 
         newItems.forEach(([item, category], index) => {
@@ -1243,36 +1283,7 @@ function inferCategoryForItem(itemName) {
  * Infer icon string based on item keywords
  */
 function inferIconForItem(itemName) {
-    if (!itemName) return "";
-    const lower = itemName.toLowerCase().trim();
-    if (/rudra.*baby|baby.*6\s*month|rudra/i.test(lower)) return "👶 Rudra Baby 6 Months";
-    if (/durga.*pooja|durga.*puja|durga/i.test(lower)) return "🪔 Durga Pooja";
-    if (/diwali|iwali|deepawali|deepavali/i.test(lower)) return "🪔 Diwali";
-    if (/holi|dhuleti|rangwali/i.test(lower)) return "🎨 Holi";
-    if (/karvachauth|karwa\s*chauth|karva\s*chauth/i.test(lower)) return "🌕 Karvachauth";
-    if (/school.*station/i.test(lower)) return "🏫 School Stationary";
-    if (/ahir.*cut|hair.*cut|haircut/i.test(lower)) return "✂️ Hair Cut";
-    if (/eelctic.*fan|electic.*fan|electric.*fan/i.test(lower)) return "🪭 Electric Fan";
-    if (/^fan\b|table\s*fan|ceiling\s*fan|exhaust\s*fan/i.test(lower)) return "🪭 Fan";
-    if (/\btv\b|television|smart\s*tv|led\s*tv|samsung\s*tv/i.test(lower)) return "📺 TV";
-    if (/electric\s*switch|switch/i.test(lower)) return "🔌 Electric Switch";
-    if (/^engine\b/i.test(lower)) return "⚙️ Engine";
-    if (/^fair\b/i.test(lower)) return "🎡 Fair";
-    if (/feb.*mar/i.test(lower)) return "📅 Feb 2026 - Mar 2026";
-    if (/ganesh/i.test(lower)) return "🪔 Ganesh Chaturthi Celebration";
-    if (/^home\b/i.test(lower)) return "🏠 Home";
-    if (/katha/i.test(lower)) return "🪔 Katha";
-    if (/labour|labor/i.test(lower)) return "🛠️ Labour Charges";
-    if (/money.*₹?1500/i.test(lower)) return "💵 Money ₹1500";
-    if (/money\s*distribution/i.test(lower)) return "💸 Money Distribution";
-    if (/^paper/i.test(lower)) return "📄 Papers";
-    if (/radhika.*rudra/i.test(lower)) return "👩‍👦 Radhika Chahar + Rudra Chahar";
-    if (/watch\s*strap|strap/i.test(lower)) return "⌚ Redmi Watch Strap";
-    if (/baby.*diaper|diaper/i.test(lower)) return "🚼 Baby Diaper";
-    if (/baby/i.test(lower)) return "👶 " + itemName;
-    if (/pooja|puja/i.test(lower)) return "🪔 " + itemName;
-    if (/stationary|stationery/i.test(lower)) return "📚 " + itemName;
-    return "";
+    return stripEmojiIcon(itemName);
 }
 
 /**
@@ -1292,177 +1303,182 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
 
         const specificRules = [
             // Baby Care
-            { pattern: /rudra.*6|baby.*6.*month/i, exactName: '👶 Rudra Baby 6 Months', category: 'Baby Care' },
-            { pattern: /rudra.*celebration/i, exactName: '👶 Rudra Baby 6 Months Celebration', category: 'Baby Care' },
-            { pattern: /radhika.*rudra/i, exactName: '👩‍👦 Radhika Chahar + Rudra Chahar', category: 'Baby Care' },
-            { pattern: /baby.*diaper|diaper/i, exactName: '🚼 Baby Diaper', category: 'Baby Care' },
-            { pattern: /baby.*carrier|carrier.*belt/i, exactName: '🚼 Baby Carrier Belt', category: 'Baby Care' },
-            { pattern: /baby.*cushion|sleeping.*cushion/i, exactName: '🛏️ Baby Sleeping Cushion', category: 'Baby Care' },
-            { pattern: /cradle/i, exactName: '🛏️ Cradle', category: 'Baby Care' },
-            { pattern: /baby.*oil/i, exactName: '💊 Baby Oil', category: 'Baby Care' },
-            { pattern: /bottle/i, exactName: '🍼 Bottle', category: 'Baby Care' },
-            { pattern: /shopping.*rudra/i, exactName: '🛍️ Shopping Rudra', category: 'Baby Care' },
+            { pattern: /rudra.*6|baby.*6.*month/i, exactName: 'Rudra Baby 6 Months', category: 'Baby Care' },
+            { pattern: /rudra.*celebration/i, exactName: 'Rudra Baby 6 Months Celebration', category: 'Baby Care' },
+            { pattern: /radhika.*rudra/i, exactName: 'Radhika Chahar + Rudra Chahar', category: 'Baby Care' },
+            { pattern: /baby.*diaper|diaper/i, exactName: 'Baby Diaper', category: 'Baby Care' },
+            { pattern: /baby.*carrier|carrier.*belt/i, exactName: 'Baby Carrier Belt', category: 'Baby Care' },
+            { pattern: /baby.*cushion|sleeping.*cushion/i, exactName: 'Baby Sleeping Cushion', category: 'Baby Care' },
+            { pattern: /cradle/i, exactName: 'Cradle', category: 'Baby Care' },
+            { pattern: /baby.*oil/i, exactName: 'Baby Oil', category: 'Baby Care' },
+            { pattern: /bottle/i, exactName: 'Bottle', category: 'Baby Care' },
+            { pattern: /shopping.*rudra/i, exactName: 'Shopping Rudra', category: 'Baby Care' },
 
             // Festivals
-            { pattern: /durga.*pooja|durga.*puja|durga/i, exactName: '🪔 Durga Pooja', category: 'Festivals' },
-            { pattern: /diwali|iwali|deepawali|deepavali/i, exactName: '🪔 Diwali', category: 'Festivals' },
-            { pattern: /holi|dhuleti|rangwali/i, exactName: '🎨 Holi', category: 'Festivals' },
-            { pattern: /karvachauth|karwa.*chauth|karva.*chauth/i, exactName: '🌕 Karvachauth', category: 'Festivals' },
-            { pattern: /ganesh.*chaturthi/i, exactName: '🪔 Ganesh Chaturthi Celebration', category: 'Festivals' },
-            { pattern: /rakhi/i, exactName: '🎀 Rakhi', category: 'Festivals' },
-            { pattern: /katha.*items/i, exactName: '🛒 Katha Items', category: 'Festivals' },
-            { pattern: /^katha$|katha/i, exactName: '🪔 Katha', category: 'Festivals' },
-            { pattern: /decoration/i, exactName: '🎉 Decoration', category: 'Festivals' },
+            { pattern: /durga.*pooja|durga.*puja|durga/i, exactName: 'Durga Pooja', category: 'Festivals' },
+            { pattern: /diwali|iwali|deepawali|deepavali/i, exactName: 'Diwali', category: 'Festivals' },
+            { pattern: /holi|dhuleti|rangwali/i, exactName: 'Holi', category: 'Festivals' },
+            { pattern: /karvachauth|karwa.*chauth|karva.*chauth/i, exactName: 'Karvachauth', category: 'Festivals' },
+            { pattern: /ganesh.*chaturthi/i, exactName: 'Ganesh Chaturthi Celebration', category: 'Festivals' },
+            { pattern: /rakhi/i, exactName: 'Rakhi', category: 'Festivals' },
+            { pattern: /katha.*items/i, exactName: 'Katha Items', category: 'Festivals' },
+            { pattern: /^katha$|katha/i, exactName: 'Katha', category: 'Festivals' },
+            { pattern: /decoration/i, exactName: 'Decoration', category: 'Festivals' },
 
             // Education
-            { pattern: /school.*station/i, exactName: '🏫 School Stationary', category: 'Education' },
-            { pattern: /school.*book|school.*books/i, exactName: '📚 School Books', category: 'Education' },
-            { pattern: /school.*activity.*fees/i, exactName: '🏫 School Activity Fees', category: 'Education' },
-            { pattern: /school.*activity/i, exactName: '🏫 School Activity', category: 'Education' },
-            { pattern: /school.*dress/i, exactName: '🏫 School Dress', category: 'Education' },
-            { pattern: /school.*exam/i, exactName: '🏫 School Exam Fees', category: 'Education' },
-            { pattern: /school.*fees.*apr/i, exactName: '🏫 School Fees Apr', category: 'Education' },
-            { pattern: /school.*fees.*jul/i, exactName: '🏫 School Fees Jul', category: 'Education' },
-            { pattern: /school.*fees.*jun/i, exactName: '🏫 School Fees Jun', category: 'Education' },
-            { pattern: /school.*fees.*may/i, exactName: '🏫 School Fees May', category: 'Education' },
-            { pattern: /school.*transport/i, exactName: '🏫 School Transportation', category: 'Education' },
-            { pattern: /^school$/i, exactName: '🏫 School', category: 'Education' },
-            { pattern: /notebook/i, exactName: '📓 Notebook', category: 'Education' },
-            { pattern: /print.*out/i, exactName: '🖨️ Print Out', category: 'Education' },
-            { pattern: /^papers$/i, exactName: '📄 Papers', category: 'Education' },
+            { pattern: /school.*station/i, exactName: 'School Stationary', category: 'Education' },
+            { pattern: /school.*book|school.*books/i, exactName: 'School Books', category: 'Education' },
+            { pattern: /school.*activity.*fees/i, exactName: 'School Activity Fees', category: 'Education' },
+            { pattern: /school.*activity/i, exactName: 'School Activity', category: 'Education' },
+            { pattern: /school.*dress/i, exactName: 'School Dress', category: 'Education' },
+            { pattern: /school.*exam/i, exactName: 'School Exam Fees', category: 'Education' },
+            { pattern: /school.*fees.*apr/i, exactName: 'School Fees Apr', category: 'Education' },
+            { pattern: /school.*fees.*jul/i, exactName: 'School Fees Jul', category: 'Education' },
+            { pattern: /school.*fees.*jun/i, exactName: 'School Fees Jun', category: 'Education' },
+            { pattern: /school.*fees.*may/i, exactName: 'School Fees May', category: 'Education' },
+            { pattern: /school.*transport/i, exactName: 'School Transportation', category: 'Education' },
+            { pattern: /^school$/i, exactName: 'School', category: 'Education' },
+            { pattern: /notebook/i, exactName: 'Notebook', category: 'Education' },
+            { pattern: /print.*out/i, exactName: 'Print Out', category: 'Education' },
+            { pattern: /^papers$/i, exactName: 'Papers', category: 'Education' },
 
             // Electronics & Appliances
-            { pattern: /eelctic.*fan|electic.*fan|electric.*fan/i, exactName: '🪭 Electric Fan', category: 'Electronics' },
-            { pattern: /^fan$|ceiling.*fan|table.*fan|exhaust.*fan/i, exactName: '🪭 Fan', category: 'Electronics' },
-            { pattern: /^tv$|television|smart.*tv|led.*tv/i, exactName: '📺 TV', category: 'Electronics' },
-            { pattern: /battery/i, exactName: '🔋 Battery', category: 'Electronics' },
-            { pattern: /^cell$/i, exactName: '🔋 Cell', category: 'Electronics' },
-            { pattern: /electric.*switch|switch/i, exactName: '🔌 Electric Switch', category: 'Electronics' },
+            { pattern: /eelctic.*fan|electic.*fan|electric.*fan/i, exactName: 'Electric Fan', category: 'Electronics' },
+            { pattern: /^fan$|ceiling.*fan|table.*fan|exhaust.*fan/i, exactName: 'Fan', category: 'Electronics' },
+            { pattern: /^tv$|television|smart.*tv|led.*tv/i, exactName: 'TV', category: 'Electronics' },
+            { pattern: /battery/i, exactName: 'Battery', category: 'Electronics' },
+            { pattern: /^cell$/i, exactName: 'Cell', category: 'Electronics' },
+            { pattern: /electric.*switch|switch/i, exactName: 'Electric Switch', category: 'Electronics' },
 
             // Medical & Health
-            { pattern: /icu.*care/i, exactName: '🏥 ICU Care', category: 'Medical' },
-            { pattern: /ultrasound/i, exactName: '🏥 Ultrasound', category: 'Medical' },
-            { pattern: /pathology.*test/i, exactName: '🔬 Pathology Test', category: 'Medical' },
-            { pattern: /medical.*test/i, exactName: '🧪 Medical Test', category: 'Medical' },
-            { pattern: /medical.*powder/i, exactName: '💊 Medical Powder', category: 'Medical' },
-            { pattern: /doctor.*fees/i, exactName: '🩺 Doctor Fees', category: 'Medical' },
-            { pattern: /medical.*vaccination|vaccination/i, exactName: '💉 Medical + Vaccination', category: 'Medical' },
-            { pattern: /medicine.*vd3/i, exactName: '💊 Medicine VD3', category: 'Medical' },
-            { pattern: /medicines/i, exactName: '💊 Medicines', category: 'Medical' },
-            { pattern: /medicine/i, exactName: '💊 Medicine', category: 'Medical' },
-            { pattern: /cotton.*band/i, exactName: '💊 Cotton & Bandage', category: 'Medical' },
-            { pattern: /medical.*1000.*apr.*7/i, exactName: '🩺 Medical ₹1000, Apr 7', category: 'Medical' },
-            { pattern: /medical.*1000.*apr.*6/i, exactName: '🩺 Medical ₹1000, Apr 6', category: 'Medical' },
+            { pattern: /icu.*care/i, exactName: 'ICU Care', category: 'Medical' },
+            { pattern: /ultrasound/i, exactName: 'Ultrasound', category: 'Medical' },
+            { pattern: /pathology.*test/i, exactName: 'Pathology Test', category: 'Medical' },
+            { pattern: /medical.*test/i, exactName: 'Medical Test', category: 'Medical' },
+            { pattern: /medical.*powder/i, exactName: 'Medical Powder', category: 'Medical' },
+            { pattern: /doctor.*fees/i, exactName: 'Doctor Fees', category: 'Medical' },
+            { pattern: /medical.*vaccination|vaccination/i, exactName: 'Medical + Vaccination', category: 'Medical' },
+            { pattern: /medicine.*vd3/i, exactName: 'Medicine VD3', category: 'Medical' },
+            { pattern: /medicines/i, exactName: 'Medicines', category: 'Medical' },
+            { pattern: /medicine/i, exactName: 'Medicine', category: 'Medical' },
+            { pattern: /cotton.*band/i, exactName: 'Cotton & Bandage', category: 'Medical' },
+            { pattern: /medical.*1000.*apr.*7/i, exactName: 'Medical ₹1000, Apr 7', category: 'Medical' },
+            { pattern: /medical.*1000.*apr.*6/i, exactName: 'Medical ₹1000, Apr 6', category: 'Medical' },
 
             // Personal Care
-            { pattern: /ahir.*cut|hair.*cut|haircut/i, exactName: '✂️ Hair Cut', category: 'Personal Care' },
-            { pattern: /hair.*color/i, exactName: '💇 Hair Color', category: 'Personal Care' },
-            { pattern: /sanitary.*pad/i, exactName: '🩹 Sanitary Pads', category: 'Personal Care' },
-            { pattern: /toothpaste/i, exactName: '🦷 Toothpaste', category: 'Personal Care' },
-            { pattern: /soap/i, exactName: '🧼 Soap', category: 'Personal Care' },
-            { pattern: /surf.*excel/i, exactName: '🧺 Surf Excel', category: 'Personal Care' },
-            { pattern: /surf/i, exactName: '🧺 Surf', category: 'Personal Care' },
-            { pattern: /^radhika$/i, exactName: '👩 Radhika', category: 'Personal Care' },
+            { pattern: /ahir.*cut|hair.*cut|haircut/i, exactName: 'Hair Cut', category: 'Personal Care' },
+            { pattern: /hair.*color/i, exactName: 'Hair Color', category: 'Personal Care' },
+            { pattern: /sanitary.*pad/i, exactName: 'Sanitary Pads', category: 'Personal Care' },
+            { pattern: /toothpaste/i, exactName: 'Toothpaste', category: 'Personal Care' },
+            { pattern: /soap/i, exactName: 'Soap', category: 'Personal Care' },
+            { pattern: /surf.*excel/i, exactName: 'Surf Excel', category: 'Personal Care' },
+            { pattern: /surf/i, exactName: 'Surf', category: 'Personal Care' },
+            { pattern: /^radhika$/i, exactName: 'Radhika', category: 'Personal Care' },
 
             // Food & Grocery
-            { pattern: /fruit/i, exactName: '🍎 Fruit', category: 'Food' },
-            { pattern: /vegetables|vegetable/i, exactName: '🥦 Vegetables', category: 'Food' },
-            { pattern: /curd/i, exactName: '🍕 Curd', category: 'Food' },
-            { pattern: /food/i, exactName: '🍕 Food', category: 'Food' },
-            { pattern: /bread/i, exactName: '🍞 Bread', category: 'Food' },
-            { pattern: /ice.*cream/i, exactName: '🍦 Ice Cream', category: 'Food' },
-            { pattern: /sweets|sweet/i, exactName: '🍬 Sweets', category: 'Food' },
-            { pattern: /snacks|snack/i, exactName: '🍿 Snacks', category: 'Food' },
-            { pattern: /cake/i, exactName: '🎂 Cake', category: 'Food' },
-            { pattern: /paneer/i, exactName: '🧀 Paneer', category: 'Food' },
-            { pattern: /dairy/i, exactName: '🥛 Dairy', category: 'Food' },
-            { pattern: /milk/i, exactName: '🥛 Milk', category: 'Food' },
-            { pattern: /coldrink|cold.*drink/i, exactName: '🥤 Coldrink', category: 'Food' },
-            { pattern: /juice/i, exactName: '🥤 Juice', category: 'Food' },
-            { pattern: /coffee/i, exactName: '☕ Coffee', category: 'Food' },
-            { pattern: /grocery/i, exactName: '🛒 Grocery', category: 'Food' },
-            { pattern: /^oil$/i, exactName: '🫙 Oil', category: 'Food' },
+            { pattern: /fruit/i, exactName: 'Fruit', category: 'Food' },
+            { pattern: /vegetables|vegetable/i, exactName: 'Vegetables', category: 'Food' },
+            { pattern: /curd/i, exactName: 'Curd', category: 'Food' },
+            { pattern: /food/i, exactName: 'Food', category: 'Food' },
+            { pattern: /bread/i, exactName: 'Bread', category: 'Food' },
+            { pattern: /ice.*cream/i, exactName: 'Ice Cream', category: 'Food' },
+            { pattern: /sweets|sweet/i, exactName: 'Sweets', category: 'Food' },
+            { pattern: /snacks|snack/i, exactName: 'Snacks', category: 'Food' },
+            { pattern: /cake/i, exactName: 'Cake', category: 'Food' },
+            { pattern: /paneer/i, exactName: 'Paneer', category: 'Food' },
+            { pattern: /dairy/i, exactName: 'Dairy', category: 'Food' },
+            { pattern: /milk/i, exactName: 'Milk', category: 'Food' },
+            { pattern: /coldrink|cold.*drink/i, exactName: 'Coldrink', category: 'Food' },
+            { pattern: /juice/i, exactName: 'Juice', category: 'Food' },
+            { pattern: /coffee/i, exactName: 'Coffee', category: 'Food' },
+            { pattern: /grocery/i, exactName: 'Grocery', category: 'Food' },
+            { pattern: /^oil$/i, exactName: 'Oil', category: 'Food' },
 
             // Transport
-            { pattern: /auto/i, exactName: '🛺 Auto', category: 'Transport' },
-            { pattern: /petrol/i, exactName: '⛽ Petrol', category: 'Transport' },
-            { pattern: /engine/i, exactName: '⚙️ Engine', category: 'Transport' },
-            { pattern: /service/i, exactName: '🔧 Service', category: 'Transport' },
-            { pattern: /train/i, exactName: '🚂 Train', category: 'Transport' },
-            { pattern: /metro/i, exactName: '🚇 Metro', category: 'Transport' },
+            { pattern: /auto/i, exactName: 'Auto', category: 'Transport' },
+            { pattern: /petrol/i, exactName: 'Petrol', category: 'Transport' },
+            { pattern: /engine/i, exactName: 'Engine', category: 'Transport' },
+            { pattern: /service/i, exactName: 'Service', category: 'Transport' },
+            { pattern: /train/i, exactName: 'Train', category: 'Transport' },
+            { pattern: /metro/i, exactName: 'Metro', category: 'Transport' },
 
             // Bills & Utilities
-            { pattern: /jio.*fiber|fiber/i, exactName: '🌐 Jio Fiber', category: 'Bills' },
-            { pattern: /recharge/i, exactName: '📱 Recharge', category: 'Bills' },
-            { pattern: /13000.*rent|10000.*rent/i, exactName: '🏠 13000 Rent+Security', category: 'Bills' },
-            { pattern: /room.*rent/i, exactName: '🏠 Room Rent', category: 'Bills' },
-            { pattern: /axix|axis/i, exactName: '🏦 Axis', category: 'Bills' },
-            { pattern: /sbi/i, exactName: '🏦 SBI', category: 'Bills' },
-            { pattern: /office.*365/i, exactName: '📦 Office 365', category: 'Bills' },
-            { pattern: /bulb.*jan/i, exactName: '💡 Bulb Jan 4, 2026 - Jan 4, 2028', category: 'Bills' },
-            { pattern: /bulb.*jun/i, exactName: '💡 Bulb Jun 15, 26 - June 15, 27', category: 'Bills' },
-            { pattern: /feb.*2026.*mar/i, exactName: '📅 Feb 2026 - Mar 2026', category: 'Bills' },
-            { pattern: /advance.*payment/i, exactName: '💵 Advance Payment', category: 'Bills' },
-            { pattern: /locker/i, exactName: '🔒 Locker', category: 'Bills' },
+            { pattern: /jio.*fiber|fiber/i, exactName: 'Jio Fiber', category: 'Bills' },
+            { pattern: /recharge/i, exactName: 'Recharge', category: 'Bills' },
+            { pattern: /13000.*rent|10000.*rent/i, exactName: '13000 Rent+Security', category: 'Bills' },
+            { pattern: /room.*rent/i, exactName: 'Room Rent', category: 'Bills' },
+            { pattern: /axix|axis/i, exactName: 'Axis', category: 'Bills' },
+            { pattern: /sbi/i, exactName: 'SBI', category: 'Bills' },
+            { pattern: /office.*365/i, exactName: 'Office 365', category: 'Bills' },
+            { pattern: /bulb.*jan/i, exactName: 'Bulb Jan 4, 2026 - Jan 4, 2028', category: 'Bills' },
+            { pattern: /bulb.*jun/i, exactName: 'Bulb Jun 15, 26 - June 15, 27', category: 'Bills' },
+            { pattern: /feb.*2026.*mar/i, exactName: 'Feb 2026 - Mar 2026', category: 'Bills' },
+            { pattern: /advance.*payment/i, exactName: 'Advance Payment', category: 'Bills' },
+            { pattern: /locker/i, exactName: 'Locker', category: 'Bills' },
 
             // Shopping
-            { pattern: /shoes.*slippers/i, exactName: '👟 Shoes & Slippers', category: 'Shopping' },
-            { pattern: /shoes/i, exactName: '👟 Shoes', category: 'Shopping' },
-            { pattern: /jewellery/i, exactName: '💍 Jewellery', category: 'Shopping' },
-            { pattern: /nagrela/i, exactName: '💍 Nagrela', category: 'Shopping' },
-            { pattern: /cover/i, exactName: '📱 Cover', category: 'Shopping' },
-            { pattern: /belt/i, exactName: '🥋 Belt', category: 'Shopping' },
-            { pattern: /amazon.*watch/i, exactName: '📦 Amazon Watches', category: 'Shopping' },
-            { pattern: /amazon/i, exactName: '📦 Amazon', category: 'Shopping' },
-            { pattern: /vishal.*mart/i, exactName: '🏪 Vishal Mart', category: 'Shopping' },
-            { pattern: /redmi.*watch|watch.*strap/i, exactName: '⌚ Redmi Watch Strap', category: 'Shopping' },
-            { pattern: /shopping.*radhika/i, exactName: '🛍️ Shopping Radhika', category: 'Shopping' },
-            { pattern: /shopping/i, exactName: '🛍️ Shopping', category: 'Shopping' },
-            { pattern: /money.*distribution.*saari/i, exactName: '🥻 Money Distribution & Saari', category: 'Shopping' },
+            { pattern: /shoes.*slippers/i, exactName: 'Shoes & Slippers', category: 'Shopping' },
+            { pattern: /shoes/i, exactName: 'Shoes', category: 'Shopping' },
+            { pattern: /jewellery/i, exactName: 'Jewellery', category: 'Shopping' },
+            { pattern: /nagrela/i, exactName: 'Nagrela', category: 'Shopping' },
+            { pattern: /cover/i, exactName: 'Cover', category: 'Shopping' },
+            { pattern: /belt/i, exactName: 'Belt', category: 'Shopping' },
+            { pattern: /amazon.*watch/i, exactName: 'Amazon Watches', category: 'Shopping' },
+            { pattern: /amazon/i, exactName: 'Amazon', category: 'Shopping' },
+            { pattern: /vishal.*mart/i, exactName: 'Vishal Mart', category: 'Shopping' },
+            { pattern: /redmi.*watch|watch.*strap/i, exactName: 'Redmi Watch Strap', category: 'Shopping' },
+            { pattern: /shopping.*radhika/i, exactName: 'Shopping Radhika', category: 'Shopping' },
+            { pattern: /shopping/i, exactName: 'Shopping', category: 'Shopping' },
+            { pattern: /money.*distribution.*saari/i, exactName: 'Money Distribution & Saari', category: 'Shopping' },
 
             // Entertainment
-            { pattern: /birthday.*gift/i, exactName: '🎂 Birthday Gift', category: 'Entertainment' },
-            { pattern: /birthday/i, exactName: '🎂 Birthday', category: 'Entertainment' },
-            { pattern: /candle.*ribbon/i, exactName: '🎂 Candle & Ribbon', category: 'Entertainment' },
-            { pattern: /reception/i, exactName: '🎉 Reception', category: 'Entertainment' },
-            { pattern: /movie/i, exactName: '🎬 Movie', category: 'Entertainment' },
-            { pattern: /fair/i, exactName: '🎡 Fair', category: 'Entertainment' },
+            { pattern: /birthday.*gift/i, exactName: 'Birthday Gift', category: 'Entertainment' },
+            { pattern: /birthday/i, exactName: 'Birthday', category: 'Entertainment' },
+            { pattern: /candle.*ribbon/i, exactName: 'Candle & Ribbon', category: 'Entertainment' },
+            { pattern: /reception/i, exactName: 'Reception', category: 'Entertainment' },
+            { pattern: /movie/i, exactName: 'Movie', category: 'Entertainment' },
+            { pattern: /fair/i, exactName: 'Fair', category: 'Entertainment' },
 
             // Household Utilities
-            { pattern: /home/i, exactName: '🏠 Home', category: 'Household Utilities' },
-            { pattern: /shoes.*polish/i, exactName: '👟 Shoes Polish', category: 'Household Utilities' },
-            { pattern: /tap.*jun/i, exactName: '📦 Tap Jun 15, 2026', category: 'Household Utilities' },
-            { pattern: /lighter/i, exactName: '🔥 Lighter', category: 'Household Utilities' },
-            { pattern: /cups.*plates/i, exactName: '🥤 Cups & Plates', category: 'Household Utilities' },
-            { pattern: /mosquito.*repellent/i, exactName: '🦟 Mosquito Repellent', category: 'Household Utilities' },
-            { pattern: /folding.*bed/i, exactName: '🛏️ Folding Bed', category: 'Household Utilities' },
-            { pattern: /labour.*charges|labour/i, exactName: '🛠️ Labour Charges', category: 'Household Utilities' },
+            { pattern: /home/i, exactName: 'Home', category: 'Household Utilities' },
+            { pattern: /shoes.*polish/i, exactName: 'Shoes Polish', category: 'Household Utilities' },
+            { pattern: /tap.*jun/i, exactName: 'Tap Jun 15, 2026', category: 'Household Utilities' },
+            { pattern: /lighter/i, exactName: 'Lighter', category: 'Household Utilities' },
+            { pattern: /cups.*plates/i, exactName: 'Cups & Plates', category: 'Household Utilities' },
+            { pattern: /mosquito.*repellent/i, exactName: 'Mosquito Repellent', category: 'Household Utilities' },
+            { pattern: /folding.*bed/i, exactName: 'Folding Bed', category: 'Household Utilities' },
+            { pattern: /labour.*charges|labour/i, exactName: 'Labour Charges', category: 'Household Utilities' },
 
             // Other / AI
-            { pattern: /gemini.*pro/i, exactName: '🤖 Gemini Pro', category: 'Other' },
-            { pattern: /^ai$/i, exactName: '🤖 AI', category: 'Other' },
-            { pattern: /money.*1500/i, exactName: '💵 Money ₹1500', category: 'Other' },
-            { pattern: /money.*distribution/i, exactName: '💸 Money Distribution', category: 'Other' },
-            { pattern: /anil.*chahar/i, exactName: '🛡️ Anil Chahar', category: 'Other' },
-            { pattern: /radhika.*chahar/i, exactName: '🛡️ Radhika Chahar', category: 'Other' }
+            { pattern: /gemini.*pro/i, exactName: 'Gemini Pro', category: 'Other' },
+            { pattern: /^ai$/i, exactName: 'AI', category: 'Other' },
+            { pattern: /money.*1500/i, exactName: 'Money ₹1500', category: 'Other' },
+            { pattern: /money.*distribution/i, exactName: 'Money Distribution', category: 'Other' },
+            { pattern: /anil.*chahar/i, exactName: 'Anil Chahar', category: 'Other' },
+            { pattern: /radhika.*chahar/i, exactName: 'Radhika Chahar', category: 'Other' }
         ];
 
         data.forEach(row => {
             let itemName = (row[1] || '').toString().trim();
-            let category = (row[2] || '').toString().trim();
             if (!itemName) return;
 
-            // Strip existing symbols/emojis to get clean text for matching
-            const cleanName = itemName.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}☀-➿\s]+/u, '').trim();
-
+            const cleanName = stripEmojiIcon(itemName);
             let rowChanged = false;
+
+            if (cleanName && cleanName !== itemName) {
+                nameReplacements[itemName] = cleanName;
+                row[1] = cleanName;
+                itemName = cleanName;
+                rowChanged = true;
+            }
+
             let ruleMatched = false;
 
             // 1. Check specific known items
             for (const rule of specificRules) {
                 if (rule.pattern.test(itemName) || (cleanName && rule.pattern.test(cleanName))) {
                     ruleMatched = true;
-                    if (itemName !== rule.exactName) {
+                    if (row[1] !== rule.exactName) {
                         nameReplacements[itemName] = rule.exactName;
                         row[1] = rule.exactName;
                         rowChanged = true;
@@ -1484,17 +1500,6 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
                 }
             }
 
-            // 3. Fallback emoji inference if item name doesn't start with emoji
-            const hasEmoji = /^([\p{Extended_Pictographic}\p{Emoji_Presentation}☀-➿])/u.test(row[1]);
-            if (!hasEmoji) {
-                const inferredIcon = inferIconForItem(row[1]);
-                if (inferredIcon && inferredIcon !== row[1]) {
-                    nameReplacements[row[1]] = inferredIcon;
-                    row[1] = inferredIcon;
-                    rowChanged = true;
-                }
-            }
-
             if (rowChanged) {
                 sheetUpdated = true;
                 updatedCount++;
@@ -1503,17 +1508,17 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
 
         // 4. Ensure mandatory user items exist
         const mandatoryItems = [
-            { exactName: '👶 Rudra Baby 6 Months', category: 'Baby Care' },
-            { exactName: '🪔 Durga Pooja', category: 'Festivals' },
-            { exactName: '🪔 Diwali', category: 'Festivals' },
-            { pattern: /holi/i, exactName: '🎨 Holi', category: 'Festivals' },
-            { exactName: '🌕 Karvachauth', category: 'Festivals' },
-            { exactName: '🏫 School Stationary', category: 'Education' },
-            { pattern: /^🪭\s*Fan$|^Fan$/i, exactName: '🪭 Fan', category: 'Electronics' },
-            { pattern: /Electric\s*Fan/i, exactName: '🪭 Electric Fan', category: 'Electronics' },
-            { pattern: /\btv\b|television/i, exactName: '📺 TV', category: 'Electronics' },
-            { pattern: /Hair\s*Cut/i, exactName: '✂️ Hair Cut', category: 'Personal Care' },
-            { pattern: /Hair\s*Color/i, exactName: '💇 Hair Color', category: 'Personal Care' }
+            { exactName: 'Rudra Baby 6 Months', category: 'Baby Care' },
+            { exactName: 'Durga Pooja', category: 'Festivals' },
+            { exactName: 'Diwali', category: 'Festivals' },
+            { pattern: /holi/i, exactName: 'Holi', category: 'Festivals' },
+            { exactName: 'Karvachauth', category: 'Festivals' },
+            { exactName: 'School Stationary', category: 'Education' },
+            { pattern: /^Fan$/i, exactName: 'Fan', category: 'Electronics' },
+            { pattern: /Electric\s*Fan/i, exactName: 'Electric Fan', category: 'Electronics' },
+            { pattern: /\btv\b|television/i, exactName: 'TV', category: 'Electronics' },
+            { pattern: /Hair\s*Cut/i, exactName: 'Hair Cut', category: 'Personal Care' },
+            { pattern: /Hair\s*Color/i, exactName: 'Hair Color', category: 'Personal Care' }
         ];
 
         let nextId = data.length > 0 ? (Math.max(...data.map(r => parseInt(r[0]) || 0)) + 1) : 1;
@@ -1602,45 +1607,153 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
  * Force-syncs and fixes all item categories and missing icons in the 'List' sheet.
  * Can be triggered via web app query (?page=syncList) or admin call.
  */
-function syncAndFixListSheetNow() {
+/**
+ * Cleans all icons/emojis from Column B of the 'List' sheet,
+ * deduplicates the items, renumbers them sequentially,
+ * and updates data validation across month sheets.
+ */
+function cleanAllColumnEIconsAndStopTriggers() {
     try {
         const ss = SpreadsheetApp.openById(MAIN_ID);
-        let listSheet = ss.getSheetByName("List");
-        if (!listSheet) {
-            const sheets = ss.getSheets();
-            for (let i = 0; i < sheets.length; i++) {
+        const results = {};
+        let totalCleanedColE = 0;
+        let totalCleanedColB = 0;
+
+        // 1. Inspect and remove any triggers on the project to prevent automatic recreation
+        var removedTriggers = [];
+        try {
+            var triggers = ScriptApp.getProjectTriggers();
+            triggers.forEach(function(t) {
+                removedTriggers.push({
+                    id: t.getUniqueId(),
+                    handler: t.getHandlerFunction(),
+                    type: t.getEventType().toString()
+                });
                 try {
-                    const s = sheets[i];
-                    if (s.getSheetId() === 2123310085 || s.getName().trim().toLowerCase() === "list") {
-                        listSheet = s;
-                        break;
-                    }
-                } catch (e) {}
-            }
-        }
-        if (!listSheet) {
-            listSheet = ensureListSheet();
+                    ScriptApp.deleteTrigger(t);
+                } catch (te) {
+                    Logger.log('Error deleting trigger: ' + te.message);
+                }
+            });
+        } catch (trigErr) {
+            Logger.log('Trigger inspection notice: ' + trigErr.message);
         }
 
-        const result = autoEnrichMissingCategoriesAndIcons(ss, listSheet, true);
-        deduplicateAndRenumberListSheet(ss, listSheet);
+        // 2. Process all sheets in the spreadsheet (Months, Data, etc.)
+        var sheets = ss.getSheets();
+        sheets.forEach(function(sheet) {
+            try {
+                if (typeof sheet.getType === 'function' && sheet.getType() !== SpreadsheetApp.SheetType.GRID) {
+                    return;
+                }
+                var sheetName = sheet.getName();
+                // Skip audit/login sheet
+                if (sheetName === 'Login' || sheetName === 'Audit__Log') return;
+
+                var lastRow = sheet.getLastRow();
+                var lastCol = sheet.getLastColumn();
+                if (lastRow <= 1) return;
+
+                var colEChanged = 0;
+                var colBChanged = 0;
+
+                // Handle 'List' sheet separately
+                if (sheetName === 'List') {
+                    if (lastCol >= 2) {
+                        var lRange = sheet.getRange(2, 2, lastRow - 1, 1);
+                        var lVals = lRange.getValues();
+                        for (var i = 0; i < lVals.length; i++) {
+                            var val = (lVals[i][0] || '').toString().trim();
+                            if (!val) continue;
+                            var clean = stripEmojiIcon(val);
+                            if (clean && clean !== val) {
+                                lVals[i][0] = clean;
+                                colEChanged++;
+                            }
+                        }
+                        if (colEChanged > 0) {
+                            lRange.setValues(lVals);
+                        }
+                    }
+                    results['List'] = { totalRows: lastRow - 1, cleanedItems: colEChanged };
+                    return;
+                }
+
+                // For Month sheets, Data sheet, and other expense sheets:
+                // Clean Column E (Item List) if sheet has at least 5 columns
+                if (lastCol >= 5) {
+                    var eRange = sheet.getRange(2, 5, lastRow - 1, 1);
+                    var eVals = eRange.getValues();
+                    for (var j = 0; j < eVals.length; j++) {
+                        var valE = (eVals[j][0] || '').toString().trim();
+                        if (!valE) continue;
+                        var cleanE = stripEmojiIcon(valE);
+                        if (cleanE !== valE) {
+                            eVals[j][0] = cleanE;
+                            colEChanged++;
+                        }
+                    }
+                    if (colEChanged > 0) {
+                        eRange.setValues(eVals);
+                        totalCleanedColE += colEChanged;
+                    }
+                    // Clear any data validation dropdowns on Column E
+                    try {
+                        eRange.clearDataValidations();
+                    } catch (cErr) {}
+                }
+
+                // Clean Column B (Unique ID) if sheet has at least 2 columns
+                if (lastCol >= 2) {
+                    var bRange = sheet.getRange(2, 2, lastRow - 1, 1);
+                    var bVals = bRange.getValues();
+                    for (var k = 0; k < bVals.length; k++) {
+                        var valB = (bVals[k][0] || '').toString().trim();
+                        if (!valB) continue;
+                        var cleanB = stripEmojiFromUniqueId(valB);
+                        if (cleanB !== valB) {
+                            bVals[k][0] = cleanB;
+                            colBChanged++;
+                        }
+                    }
+                    if (colBChanged > 0) {
+                        bRange.setValues(bVals);
+                        totalCleanedColB += colBChanged;
+                    }
+                }
+
+                results[sheetName] = {
+                    totalRows: lastRow - 1,
+                    cleanedColE: colEChanged,
+                    cleanedColB: colBChanged
+                };
+            } catch (sheetErr) {
+                Logger.log('Skipping sheet: ' + sheetErr.message);
+            }
+        });
+
+        Logger.log('Clean complete: ' + totalCleanedColE + ' Column E items cleaned, ' + totalCleanedColB + ' Column B IDs cleaned.');
 
         return {
             success: true,
-            targetSheet: listSheet ? listSheet.getName() : null,
-            targetSheetId: listSheet ? listSheet.getSheetId() : null,
-            targetSheetRows: listSheet ? listSheet.getLastRow() : 0,
-            result: result,
+            totalCleanedColE: totalCleanedColE,
+            totalCleanedColB: totalCleanedColB,
+            removedTriggers: removedTriggers,
+            sheetDetails: results,
             timestamp: new Date().toISOString()
         };
-    } catch (e) {
-        Logger.log('Error in syncAndFixListSheetNow: ' + e.message);
-        return {
-            success: false,
-            error: e.message,
-            stack: e.stack
-        };
+    } catch (err) {
+        Logger.log('Error in cleanAllColumnEIconsAndStopTriggers: ' + err.message);
+        return { success: false, error: err.message, stack: err.stack };
     }
+}
+
+function removeIconsFromListSheet() {
+    return cleanAllColumnEIconsAndStopTriggers();
+}
+
+function syncAndFixListSheetNow() {
+    return cleanAllColumnEIconsAndStopTriggers();
 }
 
 /**
@@ -1656,8 +1769,9 @@ function deduplicateAndRenumberListSheet(ss, listSheet) {
         let idCounter = 1;
 
         values.forEach(r => {
-            const itemName = (r[1] || '').toString().trim();
-            const category = (r[2] || '').toString().trim();
+            const rawItem = (r[1] || '').toString().trim();
+            const itemName = stripEmojiIcon(rawItem);
+            const category = (r[2] || '').toString().trim() || inferCategoryForItem(itemName);
             if (!itemName) return;
             const normKey = itemName.toLowerCase();
             if (!seen.has(normKey)) {
@@ -2107,14 +2221,7 @@ function addItemToList(itemName, category) {
         let finalItemName = itemName.trim();
         let finalCategory = (category && category.trim()) ? category.trim() : inferCategoryForItem(finalItemName);
 
-        // Auto-enrich item name with emoji icon if missing
-        const hasEmoji = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2600-\u27BF])/u.test(finalItemName);
-        if (!hasEmoji) {
-            const inferredIcon = inferIconForItem(finalItemName);
-            if (inferredIcon) {
-                finalItemName = inferredIcon;
-            }
-        }
+        finalItemName = stripEmojiIcon(finalItemName);
 
         // Add the new item
         listSheet.appendRow([
@@ -2144,50 +2251,60 @@ function addItemToList(itemName, category) {
 }
 
 /**
-* Updates data validation for Item List column across all month sheets
-*/
-function updateDataValidationForItemList() {
+ * Removes data validation dropdowns from Column E (Item List) across all month sheets
+ * (Jan to Dec) and the Data sheet so that only text remains without dropdowns.
+ */
+function removeDropdownsFromColumnE() {
     try {
         const ss = SpreadsheetApp.openById(MAIN_ID);
-        const allItems = getItemList();
+        const results = {};
 
-        if (allItems.length === 0) return;
-
-        // Update data validation for Item List column (column 5) in all month sheets
         MONTHS.forEach(month => {
-            const sheet = ss.getSheetByName(month);
-            if (sheet) {
-                const lastRow = sheet.getLastRow();
-                if (lastRow > 1) {
-                    const itemListRange = sheet.getRange(2, 5, lastRow - 1, 1); // Column E (5th column)
-
-                    // Create data validation rule
-                    const rule = SpreadsheetApp.newDataValidation()
-                        .requireValueInList(allItems, true)
-                        .setAllowInvalid(false)
-                        .build();
-
-                    itemListRange.setDataValidation(rule);
+            try {
+                const sheet = ss.getSheetByName(month);
+                if (sheet) {
+                    const lastRow = sheet.getLastRow();
+                    if (lastRow > 1) {
+                        const itemListRange = sheet.getRange(2, 5, lastRow - 1, 1);
+                        itemListRange.clearDataValidations();
+                        results[month] = { rows: lastRow - 1, dropdownsRemoved: true };
+                    }
                 }
+            } catch (mErr) {
+                Logger.log('Error clearing dropdowns for ' + month + ': ' + mErr.message);
+                results[month] = { error: mErr.message };
             }
         });
 
-        // Also update the Data sheet
-        const dataSheet = ss.getSheetByName("Data");
-        if (dataSheet && dataSheet.getLastRow() > 1) {
-            const dataRange = dataSheet.getRange(2, 5, dataSheet.getLastRow() - 1, 1);
-            const rule = SpreadsheetApp.newDataValidation()
-                .requireValueInList(allItems, true)
-                .setAllowInvalid(false)
-                .build();
-            dataRange.setDataValidation(rule);
+        // Also Data sheet
+        try {
+            const dataSheet = ss.getSheetByName("Data");
+            if (dataSheet) {
+                const lastRow = dataSheet.getLastRow();
+                if (lastRow > 1) {
+                    const dataRange = dataSheet.getRange(2, 5, lastRow - 1, 1);
+                    dataRange.clearDataValidations();
+                    results["Data"] = { rows: lastRow - 1, dropdownsRemoved: true };
+                }
+            }
+        } catch (dErr) {
+            Logger.log('Error clearing dropdowns for Data sheet: ' + dErr.message);
+            results["Data"] = { error: dErr.message };
         }
 
-        Logger.log('Data Validation Updated With All Items');
-
+        Logger.log('Dropdowns removed from Column E in all month sheets and Data sheet');
+        return { success: true, results: results };
     } catch (error) {
-        Logger.log('Error Updating Data Validation: ' + error.message);
+        Logger.log('Error Removing Data Validations: ' + error.message);
+        return { success: false, error: error.message };
     }
+}
+
+/**
+ * Dropdowns removed per user requirement: clear validations to ensure Column E remains plain text only
+ */
+function updateDataValidationForItemList() {
+    return removeDropdownsFromColumnE();
 }
 
 /**

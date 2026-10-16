@@ -25,7 +25,19 @@ DIM = "\033[2m"
 RESET = "\033[0m"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DESKTOP_DIR = os.path.expanduser("~/Desktop")
+
+def get_desktop_dir():
+    """Detect desktop directory considering OneDrive on Windows."""
+    # Check OneDrive Desktop first if present
+    onedrive = os.environ.get("OneDrive")
+    if onedrive and os.path.isdir(os.path.join(onedrive, "Desktop")):
+        return os.path.join(onedrive, "Desktop")
+    userprofile = os.environ.get("USERPROFILE")
+    if userprofile and os.path.isdir(os.path.join(userprofile, "OneDrive", "Desktop")):
+        return os.path.join(userprofile, "OneDrive", "Desktop")
+    return os.path.expanduser("~/Desktop")
+
+DESKTOP_DIR = get_desktop_dir()
 
 
 def get_current_project():
@@ -37,17 +49,12 @@ def get_current_project():
     if os.path.exists(os.path.join(SCRIPT_DIR, ".git")):
         return SCRIPT_DIR
 
-    # Check if we are in Coaching Demo or another Desktop folder
+    # Check if we are in current directory
     current_cwd = os.getcwd()
     if os.path.exists(os.path.join(current_cwd, ".git")):
         return current_cwd
 
-    # Default to Coaching Demo if found on Desktop
-    coaching_demo = os.path.join(DESKTOP_DIR, "Coaching Demo")
-    if os.path.exists(os.path.join(coaching_demo, ".git")):
-        return coaching_demo
-
-    return None
+    return SCRIPT_DIR
 
 
 def list_desktop_projects():
@@ -206,6 +213,19 @@ def get_vercel_project_name(project_dir):
     return None
 
 
+def open_url_in_browser(url):
+    """Open URL cross-platform."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(url)
+        elif sys.platform == "darwin":
+            subprocess.run(["open", url])
+        else:
+            subprocess.run(["xdg-open", url])
+    except Exception as e:
+        print(f"{RED}Could not open browser: {e}{RESET}")
+
+
 def deploy_vercel(project_dir, auto=False):
     """Deploy project to Vercel (Production)."""
     proj_name = os.path.basename(project_dir)
@@ -229,10 +249,7 @@ def deploy_vercel(project_dir, auto=False):
     if proc.returncode == 0:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! Deployed to Vercel successfully.{RESET}")
         print(f"👉 {BOLD}{CYAN}{live_url}{RESET}\n")
-        try:
-            subprocess.run(["open", live_url])
-        except Exception:
-            pass
+        open_url_in_browser(live_url)
     else:
         print(f"\n{YELLOW}If deployment requires authentication, run: npx vercel login{RESET}")
         print(f"Or view project at: {CYAN}{live_url}{RESET}")
@@ -242,10 +259,7 @@ def open_vercel_site(project_dir):
     """Open active Vercel site in browser."""
     url = get_vercel_site_url(project_dir) or "https://expense-pros.vercel.app/"
     print(f"\n{CYAN}Opening Vercel site in browser:{RESET} {GREEN}{url}{RESET}")
-    try:
-        subprocess.run(["open", url])
-    except Exception as e:
-        print(f"{RED}Could not open browser: {e}{RESET}")
+    open_url_in_browser(url)
 
 
 def delete_vercel_project(project_dir):
@@ -392,7 +406,7 @@ def quick_push(project_dir):
         if choice_netlify in ("y", "yes"):
             deploy_netlify(project_dir, auto=True)
     else:
-        print(f"\n{RED}❌ Push failed. Please check remote origin.{RESET}")
+        print(f"\n{RED}❌ Push failed. Please check remote origin and permissions.{RESET}")
 
 
 def deploy_netlify(project_dir, auto=False):
@@ -433,10 +447,7 @@ def create_netlify_site(project_dir):
     print("  2. Keep the build settings from netlify.toml.")
     print("  3. Set APPS_SCRIPT_WEB_APP_URL to your Apps Script /exec URL.")
     print("  4. Deploy the site from Netlify.")
-    try:
-        subprocess.run(["open", "https://app.netlify.com/start"], check=True)
-    except subprocess.CalledProcessError as error:
-        print(f"{RED}Could not open Netlify in the browser (exit code {error.returncode}).{RESET}")
+    open_url_in_browser("https://app.netlify.com/start")
 
 
 def delete_netlify(project_dir):
@@ -680,12 +691,12 @@ def create_repository(project_dir):
     run_cmd("git add .", cwd=target_dir)
     subprocess.run('git commit -m "Initial commit"', shell=True, cwd=target_dir)
     subprocess.run("git remote remove origin", shell=True, cwd=target_dir)
-    remote_url = f"git@github.com:Anil1310/{github_repo_name}.git"
+    remote_url = f"https://github.com/Anil1310/{github_repo_name}.git"
     run_cmd(f'git remote add origin "{remote_url}"', cwd=target_dir)
 
     print(f"\n{CYAN}Opening GitHub in browser to create remote repository...{RESET}")
     create_url = f"https://github.com/new?{urlencode({'name': github_repo_name})}"
-    subprocess.run(["open", create_url])
+    open_url_in_browser(create_url)
 
     print(f"\n{GREEN}>>> Step:{RESET} In your browser, click the green {BOLD}'Create repository'{RESET} button.")
     print(f"    (Leave 'Add a README' unchecked since we already initialized it).")
@@ -699,10 +710,7 @@ def create_repository(project_dir):
     if success:
         repository_url = f"https://github.com/Anil1310/{github_repo_name}"
         print(f"\n{GREEN}🎉 SUCCESS! Repository live at: {repository_url}{RESET}")
-        try:
-            subprocess.run(["open", repository_url])
-        except Exception:
-            pass
+        open_url_in_browser(repository_url)
         return target_dir
     return None
 
@@ -724,7 +732,7 @@ def clone_repository():
     if repo_input.startswith("git@") or repo_input.startswith("https://"):
         clone_url = repo_input
     else:
-        clone_url = f"git@github.com:Anil1310/{repo_input}.git"
+        clone_url = f"https://github.com/Anil1310/{repo_input}.git"
 
     print(f"\n{CYAN}Cloning {clone_url} into Desktop...{RESET}")
     success = run_cmd(f'git clone "{clone_url}"', cwd=DESKTOP_DIR)
@@ -733,10 +741,7 @@ def clone_repository():
         folder_name = os.path.basename(clone_url).replace(".git", "")
         cloned_path = os.path.join(DESKTOP_DIR, folder_name)
         print(f"\n{GREEN}✅ Repository cloned successfully to: {cloned_path}{RESET}")
-        try:
-            subprocess.run(f'open "{cloned_path}"', shell=True)
-        except Exception:
-            pass
+        open_url_in_browser(cloned_path)
         return cloned_path
     else:
         print(f"\n{RED}❌ Failed to clone repository. Please verify the repository name.{RESET}")
