@@ -7568,19 +7568,42 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         }
 
         #pdfPreviewModal .modal-body {
-            flex: 1 1 100% !important;
-            height: auto !important;
+            flex: 1 1 auto !important;
+            height: calc(100% - 52px) !important;
+            height: calc(100dvh - 52px) !important;
+            max-height: calc(100dvh - 52px) !important;
             width: 100vw !important;
-            overflow: hidden !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
             background: #ffffff !important;
-            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            position: relative !important;
         }
 
         #pdfPreviewModal #pdfPreviewIframe {
             width: 100% !important;
+            min-width: 100% !important;
             height: 100% !important;
+            min-height: 100% !important;
             border: none !important;
+            display: block !important;
+            background: #ffffff !important;
             -webkit-overflow-scrolling: touch !important;
+        }
+
+        #pdfPreviewModal .pdf-scroll-btn {
+            font-size: 0.72rem !important;
+            padding: 4px 10px !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+        #pdfPreviewModal .pdf-scroll-btn:hover,
+        #pdfPreviewModal .pdf-scroll-btn:active {
+            background: rgba(255, 255, 255, 0.25) !important;
+            color: #ffffff !important;
         }
     }
 </style>

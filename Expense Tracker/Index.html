@@ -1364,6 +1364,10 @@ Expense Tracker Pro: 2026 Frontend Code
             </h5>
           </div>
           <div class="pdf-modal-actions">
+            <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-2 pdf-scroll-btn me-1" id="pdfScrollBottomBtn" onclick="togglePdfScroll()" title="Scroll to bottom / top">
+              <i class="fas fa-arrow-down" id="pdfScrollIcon"></i>
+              <span class="d-none d-sm-inline ms-1" id="pdfScrollText">Bottom</span>
+            </button>
             <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold pdf-print-btn" onclick="printPreviewPDF()">
               <i class="fas fa-print me-1"></i><span class="pdf-btn-label">Print / Save PDF</span>
             </button>
