@@ -98,7 +98,9 @@ def print_banner(project_path):
     print(f"\n{CYAN}{border}{RESET}")
     print(f"{CYAN}  {BOLD}DEVOPS CONTROL CENTER{RESET}{CYAN}  /  GitHub · Vercel · Netlify · Apps Script{RESET}")
     print(f"{CYAN}{border}{RESET}")
-    print(f"  {DIM}PROJECT{RESET}  {BOLD}{proj_name}{RESET}  {DIM}·  BRANCH{RESET}  {GREEN}{branch}{RESET}")
+    branch_display = branch or "No Git"
+    branch_color = GREEN if branch else DIM
+    print(f"  {DIM}PROJECT{RESET}  {BOLD}{proj_name}{RESET}  {DIM}·  BRANCH{RESET}  {branch_color}{branch_display}{RESET}")
     print(f"  {DIM}PATH{RESET}     {project_path}")
     print(f"  {DIM}ORIGIN{RESET}   {remote or 'Not configured'}")
     print(f"{CYAN}{border}{RESET}\n")
@@ -120,8 +122,13 @@ def print_menu_section(title, options):
 
     if selection == "0":
         return None
-    if selection.isdigit() and 1 <= int(selection) <= len(options):
-        return str(options[int(selection) - 1][0])
+    if selection.isdigit():
+        val = int(selection)
+        if 1 <= val <= len(options):
+            return str(options[val - 1][0])
+        for opt in options:
+            if str(opt[0]) == selection:
+                return selection
 
     print(f"{RED}Invalid submenu selection.{RESET}")
     return None
@@ -135,26 +142,54 @@ def run_cmd(cmd, cwd=None, check=True):
     except subprocess.CalledProcessError as e:
         print(f"{RED}Error: {e}{RESET}")
         return False
+    except Exception as e:
+        print(f"{RED}Error: {e}{RESET}")
+        return False
 
 
 def get_git_info(project_dir):
-    """Get active branch and remote origin."""
-    branch_result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True,
-        text=True,
-        cwd=project_dir
-    )
-    branch = branch_result.stdout.strip() or "main"
+    """Get active branch and remote origin safely."""
+    if not project_dir or not os.path.isdir(project_dir):
+        return None, None
 
-    remote_result = subprocess.run(
-        ["git", "remote", "get-url", "origin"],
-        capture_output=True,
-        text=True,
-        cwd=project_dir
-    )
-    remote = remote_result.stdout.strip() if remote_result.returncode == 0 else None
-    return branch, remote
+    try:
+        # Check if project_dir is inside a git repository
+        repo_check = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            cwd=project_dir
+        )
+        if repo_check.returncode != 0:
+            return None, None
+
+        branch_result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            cwd=project_dir
+        )
+        branch = branch_result.stdout.strip()
+        if not branch:
+            # Fallback for detached HEAD or unborn branch
+            head_result = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=project_dir
+            )
+            branch = head_result.stdout.strip() if head_result.returncode == 0 else "main"
+
+        remote_result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            cwd=project_dir
+        )
+        remote = remote_result.stdout.strip() if remote_result.returncode == 0 else None
+        return branch, remote
+    except (OSError, subprocess.SubprocessError):
+        return None, None
 
 
 def get_netlify_site_url(project_dir):
@@ -196,7 +231,7 @@ def get_vercel_site_url(project_dir):
         except Exception:
             pass
 
-    return "https://expenselive.vercel.app/"
+    return "https://expense-pros.vercel.app/"
 
 
 def get_vercel_project_name(project_dir):
@@ -210,7 +245,7 @@ def get_vercel_project_name(project_dir):
         except Exception:
             pass
     if "expense" in os.path.basename(project_dir).lower():
-        return "expensepro"
+        return "expense-pro"
     return None
 
 
@@ -242,7 +277,7 @@ def deploy_vercel(project_dir, auto=False):
     print(f"{CYAN}Running: {' '.join(cmd)}...{RESET}")
     proc = subprocess.run(cmd, cwd=project_dir)
 
-    live_url = get_vercel_site_url(project_dir) or "https://expenselive.vercel.app/"
+    live_url = get_vercel_site_url(project_dir) or "https://expense-pros.vercel.app/"
     if proc.returncode == 0:
         print(f"\n{GREEN}{BOLD}🎉 SUCCESS! Deployed to Vercel successfully.{RESET}")
         print(f"👉 {BOLD}{CYAN}{live_url}{RESET}\n")
@@ -254,7 +289,7 @@ def deploy_vercel(project_dir, auto=False):
 
 def open_vercel_site(project_dir):
     """Open active Vercel site in browser."""
-    url = get_vercel_site_url(project_dir) or "https://expenselive.vercel.app/"
+    url = get_vercel_site_url(project_dir) or "https://expense-pros.vercel.app/"
     print(f"\n{CYAN}Opening Vercel site in browser:{RESET} {GREEN}{url}{RESET}")
     open_url_in_browser(url)
 
@@ -758,15 +793,18 @@ def view_status(project_dir):
     print(f"  {BOLD}Project Name:{RESET}     {GREEN}{proj_name}{RESET}")
     print(f"  {BOLD}Directory:{RESET}        {project_dir}")
     print(f"  {BOLD}GitHub Remote:{RESET}    {remote or 'Not configured'}")
-    print(f"  {BOLD}Current Branch:{RESET}   {branch}")
+    print(f"  {BOLD}Current Branch:{RESET}   {branch or 'Not configured'}")
     print(f"  {BOLD}Vercel Live URL:{RESET}  {CYAN}{vercel_site_url or 'Not configured'}{RESET}")
     print(f"  {BOLD}Netlify Live URL:{RESET} {CYAN}{netlify_site_url or 'Not configured'}{RESET}\n")
 
-    print(f"{BOLD}Recent Commits:{RESET}")
-    subprocess.run('git log -n 4 --format="  • %h | %s (%cr)"', shell=True, cwd=project_dir)
+    if branch or remote:
+        print(f"{BOLD}Recent Commits:{RESET}")
+        subprocess.run('git log -n 4 --format="  • %h | %s (%cr)"', shell=True, cwd=project_dir)
 
-    print(f"\n{BOLD}Working Tree:{RESET}")
-    subprocess.run("git status -s", shell=True, cwd=project_dir)
+        print(f"\n{BOLD}Working Tree:{RESET}")
+        subprocess.run("git status -s", shell=True, cwd=project_dir)
+    else:
+        print(f"{DIM}Git repository is not initialized in this project folder.{RESET}")
 
 
 def main():

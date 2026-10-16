@@ -5425,10 +5425,6 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             position: relative !important;
         }
 
-        #dashboard-page .table-responsive {
-            max-height: max(140px, min(50vh, calc(100dvh - 360px))) !important;
-        }
-
         #reports-page .table-responsive {
             min-height: calc(100vh - 365px) !important;
             min-height: calc(100dvh - 365px) !important;
@@ -7487,6 +7483,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: 100dvh !important;
             overflow: visible !important;
         }
+    }
+
     /* ── PDF Preview Modal (Base Desktop & Laptop) ── */
     #pdfPreviewModal .modal-dialog {
         max-width: 95%;
@@ -7673,19 +7671,15 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         }
 
         #pdfPreviewModal .modal-body {
-            flex: 1 1 0% !important;
-            min-height: 0 !important;
+            flex: 1 1 100% !important;
             height: auto !important;
             width: 100vw !important;
             overflow: hidden !important;
             background: #ffffff !important;
-            padding: 0 !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
         }
 
         #pdfPreviewModal #pdfPreviewIframe {
-            display: block !important;
-            flex: 1 1 0% !important;
-            min-height: 0 !important;
             width: 100% !important;
             height: 100% !important;
             border: none !important;
@@ -9209,7 +9203,7 @@ Expense Tracker Pro: 2026 JavaScript Code
     const REPORTS_PER_PAGE = 30;
 
     // Mobile Infinite Scroll State
-    const MOBILE_BATCH_SIZE = 100;         // Records loaded per scroll-batch
+    const MOBILE_BATCH_SIZE = 30;          // Records loaded per scroll-batch
     let mobileDashboardAllData = [];       // Full sorted dataset for dashboard
     let mobileDashboardLoadedCount = 0;    // How many rows are currently in DOM
     let mobileDashboardObserver = null;    // IntersectionObserver instance
@@ -10648,7 +10642,6 @@ Expense Tracker Pro: 2026 JavaScript Code
         const oldSentinel = tableBody.querySelector('.scroll-sentinel');
         if (oldSentinel) oldSentinel.remove();
 
-        const fragment = document.createDocumentFragment();
         for (let i = start; i < end; i++) {
             const row = data[i];
             const sn = row.sn;
@@ -10691,9 +10684,8 @@ Expense Tracker Pro: 2026 JavaScript Code
             deleteBtn.onclick = () => openDeleteModal(uniqueId, CURRENT_MONTH);
             actionTd.appendChild(editBtn);
             actionTd.appendChild(deleteBtn);
-            fragment.appendChild(tr);
+            tableBody.appendChild(tr);
         }
-        tableBody.appendChild(fragment);
         mobileDashboardLoadedCount = end;
         isDashboardBatchLoading = false;
 
@@ -10708,9 +10700,7 @@ Expense Tracker Pro: 2026 JavaScript Code
                 </td>`;
             tableBody.appendChild(sentinel);
 
-            const container = tableBody.closest('.table-responsive');
-
-            // Observe the sentinel using the table scroll area's viewport
+            // Observe the sentinel using viewport intersection with generous rootMargin
             if (mobileDashboardObserver) mobileDashboardObserver.disconnect();
             mobileDashboardObserver = new IntersectionObserver((entries) => {
                 if (entries[0] && entries[0].isIntersecting) {
@@ -10718,13 +10708,14 @@ Expense Tracker Pro: 2026 JavaScript Code
                     appendDashboardBatch(tableBody);
                 }
             }, {
-                root: container,
+                root: null,
                 rootMargin: '250px 0px 250px 0px',
                 threshold: 0
             });
             mobileDashboardObserver.observe(sentinel);
 
             // Attach scroll listener fallback to container and window
+            const container = tableBody.closest('.table-responsive');
             if (container && !container._hasMobileScrollListener) {
                 container._hasMobileScrollListener = true;
                 container.addEventListener('scroll', () => {
@@ -10763,7 +10754,6 @@ Expense Tracker Pro: 2026 JavaScript Code
         const oldSentinel = tableBody.querySelector('.scroll-sentinel');
         if (oldSentinel) oldSentinel.remove();
 
-        const fragment = document.createDocumentFragment();
         for (let i = start; i < end; i++) {
             const item = data[i];
             const sn = item.sn;
@@ -10811,9 +10801,8 @@ Expense Tracker Pro: 2026 JavaScript Code
             actionTd.appendChild(viewBtn);
             actionTd.appendChild(editBtn);
             actionTd.appendChild(deleteBtn);
-            fragment.appendChild(tr);
+            tableBody.appendChild(tr);
         }
-        tableBody.appendChild(fragment);
         mobileReportsLoadedCount = end;
         isReportsBatchLoading = false;
 
@@ -10987,7 +10976,14 @@ Expense Tracker Pro: 2026 JavaScript Code
     function handleItemsListData(items) {
         itemsList = (items || []).map(item => {
             if (!item || typeof item !== 'string') return item;
-            return getItemDisplayName(item.trim());
+            const trimmed = item.trim();
+            // If already starts with an emoji or special symbol, keep as is
+            if (/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2600-\u27BF])/u.test(trimmed)) {
+                return trimmed;
+            }
+            // Auto-enrich item missing icon from ITEM_ICON_MAP
+            const icon = (typeof getIconForItem === 'function') ? getIconForItem(trimmed) : '';
+            return icon || trimmed;
         });
         populateItemsDropdown();
         populateEnhancedItemFilter();
@@ -11028,14 +11024,7 @@ Expense Tracker Pro: 2026 JavaScript Code
     }
 
     function getItemDisplayName(item) {
-        if (!item) return '';
-        var str = item.toString().trim();
-        str = str.replace(/^[\s\uD800-\uDBFF\uDC00-\uDFFF\u2600-\u27BF\uFE00-\uFE0F\u200D\u2000-\u206F\u2B50\u231A-\u23FA\u25A0-\u25FF\u2B00-\u2BFF\u2190-\u21FF\u2300-\u23FF\u2900-\u297F]+/, '');
-        str = str.replace(/^[^\w\s"'(+\-\u0900-\u097F]+/u, '');
-        try {
-            str = str.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji}\s]+/u, '');
-        } catch (e) {}
-        return str.trim();
+        return item.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\u2600-\u27BF\uFE0F\uFE0E\u200D\u{1F3FB}-\u{1F3FF}]+\s*/u, '');
     }
 
     function renderResults(list) {
@@ -11324,11 +11313,25 @@ Expense Tracker Pro: 2026 JavaScript Code
         const searchInput = document.getElementById('itemSearchInput');
         const mainInput = document.getElementById('itemList');
         const resultsContainer = document.getElementById('autocompleteResults');
+        const creditInput = document.getElementById('credit');
 
         if (searchInput) searchInput.value = getItemDisplayName(name);
         if (mainInput) mainInput.value = getItemDisplayName(name);
         if (resultsContainer) resultsContainer.classList.add('d-none');
         activeItemIndex = -1;
+
+        // ── Auto-fill Credit & Remark with matching icon ──────────────────────
+        if (creditInput) {
+            const icon = getIconForItem(name);
+            if (icon) {
+                creditInput.value = icon;
+                // Brief highlight to draw attention
+                creditInput.style.transition = 'background 0.4s';
+                creditInput.style.background = '#fef9c3';
+                setTimeout(() => { creditInput.style.background = ''; }, 800);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
     }
 
     document.addEventListener('click', function (e) {
@@ -11761,7 +11764,6 @@ Expense Tracker Pro: 2026 JavaScript Code
         const total = (data || []).length;
         const unseen = Math.max(0, total - lastSeen);
         const uncleared = Math.max(0, total - lastCleared);
-        const newlyAvailable = Math.max(0, Math.min(unseen, uncleared));
 
         const badge = document.getElementById(`${type}-notification-count`);
         if (badge) {
@@ -11771,10 +11773,10 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         const list = document.getElementById(`${type}-notification-list`);
         if (list) {
-            const maxToShow = Math.min(newlyAvailable, 8);
-            const latest = data.slice(0, maxToShow); // Only show the newest unread notifications, up to 8
+            const maxToShow = Math.min(uncleared, 8);
+            const latest = data.slice(0, maxToShow); // Only show uncleared notifications, up to 8
             if (latest.length === 0) {
-                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No new notifications.</div>`;
+                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No recent records.</div>`;
             } else {
                 let html = `
                     <div class="clear-notifications-header" style="padding: 6px 10px; text-align: right; background: #000; border-bottom: 2px solid rgba(255,193,7,0.3);">
@@ -12520,7 +12522,7 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         const uniqueIdValue = uniqueId.value;
         const monthValue = month.value || CURRENT_MONTH;
-        const itemListValue = getItemDisplayName(itemList.value).trim();
+        const itemListValue = itemList.value;
         const amountValue = parseFloat(amount.value);
         const dateValue = date.value;
         const creditValue = credit.value;
@@ -13119,9 +13121,8 @@ Expense Tracker Pro: 2026 JavaScript Code
   .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; }
 
   @media screen and (max-width: 768px) {
-    html, body { min-height: 100%; overflow-x: hidden; }
-    body { padding: 8px 6px; font-size: 11px; background: #f1f5f9; overflow-y: auto; }
-    .page { width: 100%; padding: 12px 8px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    body { padding: 10px 8px; font-size: 11px; background: #f1f5f9; }
+    .page { padding: 14px 10px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     .report-header { flex-direction: column; align-items: flex-start; gap: 12px; padding-bottom: 14px; margin-bottom: 18px; }
     .meta-info { text-align: left; width: 100%; }
     .stats-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
@@ -13130,10 +13131,8 @@ Expense Tracker Pro: 2026 JavaScript Code
     .stat-value { font-size: 1.05rem; }
     .report-body { flex-direction: column; gap: 20px; }
     .details-column, .summary-column { width: 100%; flex: none; }
-    .table-responsive-wrapper { overflow-x: hidden; }
-    .table-responsive-wrapper table { width: 100%; min-width: 0; table-layout: fixed; }
-    .table-responsive-wrapper th, .table-responsive-wrapper td { padding: 6px 4px; white-space: normal; overflow-wrap: anywhere; }
-    .summary-column .table-responsive-wrapper table { min-width: 0; }
+    .table-responsive-wrapper table { min-width: 520px; }
+    .summary-column .table-responsive-wrapper table { min-width: 260px; }
     .footer { flex-direction: column; gap: 6px; align-items: flex-start; }
   }
   
