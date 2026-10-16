@@ -109,10 +109,9 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
 
-    if (page === 'cleanAllMonths' || page === 'stopIcons' || page === 'syncList' || page === 'updateList' || page === 'fixList' || page === 'cleanListIcons' || page === 'removeDropdowns') {
-        const result = cleanAllColumnEIconsAndStopTriggers();
-        const dropResult = removeDropdownsFromColumnE();
-        return ContentService.createTextOutput(JSON.stringify({ result: result, dropdownResult: dropResult }))
+    if (page === 'cleanAllMonths' || page === 'stopIcons' || page === 'syncList' || page === 'updateList' || page === 'fixList' || page === 'cleanListIcons' || page === 'removeDropdowns' || page === 'initDatabase' || page === 'setupDatabase') {
+        const dbResult = setupDatabaseSchema();
+        return ContentService.createTextOutput(JSON.stringify(dbResult))
             .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -170,7 +169,9 @@ function doPost(e) {
             restoreEntry: (...args) => restoreEntry(...args),
             runCompleteProcess: (...args) => runCompleteProcess(...args),
             saveProfilePhoto: (...args) => saveProfilePhoto(...args),
-            cleanAllColumnEIconsAndStopTriggers: (...args) => cleanAllColumnEIconsAndStopTriggers(...args)
+            cleanAllColumnEIconsAndStopTriggers: (...args) => cleanAllColumnEIconsAndStopTriggers(...args),
+            setupDatabaseSchema: (...args) => setupDatabaseSchema(...args),
+            syncAllMonthsToDataTable: (...args) => syncAllMonthsToDataTable(...args)
         };
 
         if (!request || typeof request.method !== "string" ||
@@ -547,25 +548,32 @@ function ensureSheetExists(ss, sheetName, headers) {
     if (!sheet) {
         sheet = ss.insertSheet(sheetName);
         sheet.appendRow(headers);
+    } else if (sheet.getLastRow() === 0) {
+        sheet.appendRow(headers);
+    }
 
-        // Format header row
-        const headerRange = sheet.getRange(1, 1, 1, headers.length);
-        headerRange.setFontWeight("bold");
-        headerRange.setBackground("#f0f0f0");
+    // Database table formatting
+    sheet.setFrozenRows(1);
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#1a365d");
+    headerRange.setFontColor("#ffffff");
 
-        // Set column widths
-        sheet.setColumnWidth(1, 50);  // S.N
-        sheet.setColumnWidth(2, 150); // Unique ID
-        sheet.setColumnWidth(3, 100); // Date
-        sheet.setColumnWidth(4, 80);  // Month
-        sheet.setColumnWidth(5, 200); // Item List
-        sheet.setColumnWidth(6, 100); // Amount
-        sheet.setColumnWidth(7, 150); // Credit & Remark
-        sheet.setColumnWidth(8, 150); // Admin
+    // Standard database column widths
+    sheet.setColumnWidth(1, 55);  // S.N
+    sheet.setColumnWidth(2, 160); // Unique ID
+    sheet.setColumnWidth(3, 110); // Date
+    sheet.setColumnWidth(4, 75);  // Month
+    sheet.setColumnWidth(5, 220); // Item List
+    sheet.setColumnWidth(6, 110); // Amount
+    sheet.setColumnWidth(7, 180); // Credit & Remark
+    sheet.setColumnWidth(8, 140); // Admin
 
-        // Pre-format the amount column as number
-        const amountCol = sheet.getRange(2, 6, sheet.getMaxRows() - 1, 1);
-        amountCol.setNumberFormat("###0");
+    // Pre-format database numeric columns
+    const maxRows = sheet.getMaxRows();
+    if (maxRows > 1) {
+        sheet.getRange(2, 1, maxRows - 1, 1).setNumberFormat("0");
+        sheet.getRange(2, 6, maxRows - 1, 1).setNumberFormat("#,##0.00");
     }
     return sheet;
 }
@@ -2358,6 +2366,260 @@ function removeDropdownsFromColumnE() {
  */
 function updateDataValidationForItemList() {
     return removeDropdownsFromColumnE();
+}
+
+/**
+ * Transforms and configures the Google Spreadsheet as a high-performance database
+ * for the web application: ensures all 12 month tables exist, standardizes column schemas,
+ * freezes header rows, sets numeric database types, and syncs master Data table.
+ */
+function setupDatabaseSchema() {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(30000);
+        const ss = SpreadsheetApp.openById(MAIN_ID);
+        const standardHeaders = ["S.N", "Unique ID", "Date", "Month", "Item List", "Amount", "Credit & Remark", "Admin"];
+        const report = {
+            tablesVerified: [],
+            newTablesCreated: [],
+            totalRecordsIndexed: 0,
+            triggersPurged: 0
+        };
+
+        // 1. Purge any triggers that interfere with database operations
+        try {
+            const triggers = ScriptApp.getProjectTriggers();
+            triggers.forEach(t => {
+                try { ScriptApp.deleteTrigger(t); report.triggersPurged++; } catch (e) {}
+            });
+        } catch (e) {}
+
+        // 2. Ensure all 12 Month tables (Jan - Dec) exist and are formatted as database tables
+        MONTHS.forEach(month => {
+            let sheet = ss.getSheetByName(month);
+            if (!sheet) {
+                sheet = ss.insertSheet(month);
+                sheet.appendRow(standardHeaders);
+                report.newTablesCreated.push(month);
+            } else if (sheet.getLastRow() === 0) {
+                sheet.appendRow(standardHeaders);
+            } else {
+                sheet.getRange(1, 1, 1, standardHeaders.length).setValues([standardHeaders]);
+            }
+            report.tablesVerified.push(month);
+
+            // Table UI: Freeze header row, style header
+            sheet.setFrozenRows(1);
+            const headerRange = sheet.getRange(1, 1, 1, standardHeaders.length);
+            headerRange.setFontWeight("bold");
+            headerRange.setBackground("#1a365d");
+            headerRange.setFontColor("#ffffff");
+
+            // Standard column widths
+            sheet.setColumnWidth(1, 55);  // S.N
+            sheet.setColumnWidth(2, 160); // Unique ID
+            sheet.setColumnWidth(3, 110); // Date
+            sheet.setColumnWidth(4, 75);  // Month
+            sheet.setColumnWidth(5, 220); // Item List
+            sheet.setColumnWidth(6, 110); // Amount
+            sheet.setColumnWidth(7, 180); // Credit & Remark
+            sheet.setColumnWidth(8, 140); // Admin
+
+            // Number formatting for numeric columns
+            const maxRows = sheet.getMaxRows();
+            if (maxRows > 1) {
+                sheet.getRange(2, 1, maxRows - 1, 1).setNumberFormat("0");
+                sheet.getRange(2, 6, maxRows - 1, 1).setNumberFormat("#,##0.00");
+                // Clear any dropdown validations across Column E
+                sheet.getRange(2, 5, maxRows - 1, 1).clearDataValidations();
+            }
+
+            // Sanitize Column E: remove emoji icons, ensure clean text
+            const lastRow = sheet.getLastRow();
+            if (lastRow > 1) {
+                const eRange = sheet.getRange(2, 5, lastRow - 1, 1);
+                const eVals = eRange.getValues();
+                let dirty = false;
+                for (let r = 0; r < eVals.length; r++) {
+                    const raw = (eVals[r][0] || '').toString();
+                    const clean = stripEmojiIcon(raw);
+                    if (clean !== raw) {
+                        eVals[r][0] = clean;
+                        dirty = true;
+                    }
+                }
+                if (dirty) {
+                    eRange.setValues(eVals);
+                }
+            }
+        });
+
+        // 3. Ensure Master 'Data' table (Consolidated Transactions Store)
+        let dataSheet = ss.getSheetByName("Data");
+        if (!dataSheet) {
+            dataSheet = ss.insertSheet("Data");
+            dataSheet.appendRow(standardHeaders);
+            report.newTablesCreated.push("Data");
+        } else if (dataSheet.getLastRow() === 0) {
+            dataSheet.appendRow(standardHeaders);
+        } else {
+            dataSheet.getRange(1, 1, 1, standardHeaders.length).setValues([standardHeaders]);
+        }
+        report.tablesVerified.push("Data");
+
+        dataSheet.setFrozenRows(1);
+        dataSheet.getRange(1, 1, 1, standardHeaders.length)
+            .setFontWeight("bold")
+            .setBackground("#0f2942")
+            .setFontColor("#ffffff");
+
+        dataSheet.setColumnWidth(1, 55);
+        dataSheet.setColumnWidth(2, 160);
+        dataSheet.setColumnWidth(3, 110);
+        dataSheet.setColumnWidth(4, 75);
+        dataSheet.setColumnWidth(5, 220);
+        dataSheet.setColumnWidth(6, 110);
+        dataSheet.setColumnWidth(7, 180);
+        dataSheet.setColumnWidth(8, 140);
+
+        if (dataSheet.getMaxRows() > 1) {
+            dataSheet.getRange(2, 1, dataSheet.getMaxRows() - 1, 1).setNumberFormat("0");
+            dataSheet.getRange(2, 6, dataSheet.getMaxRows() - 1, 1).setNumberFormat("#,##0.00");
+            dataSheet.getRange(2, 5, dataSheet.getMaxRows() - 1, 1).clearDataValidations();
+        }
+
+        // 4. Ensure 'List' table (Items & Categories catalog)
+        let listSheet = ss.getSheetByName("List");
+        if (!listSheet) {
+            listSheet = ss.insertSheet("List");
+            listSheet.appendRow(["S.N", "Item List", "Category", "Date Added", "Added By"]);
+            report.newTablesCreated.push("List");
+        }
+        listSheet.setFrozenRows(1);
+        listSheet.getRange(1, 1, 1, Math.max(5, listSheet.getLastColumn()))
+            .setFontWeight("bold")
+            .setBackground("#2d3748")
+            .setFontColor("#ffffff");
+        report.tablesVerified.push("List");
+
+        // 5. Ensure 'Admin' table (User credentials & Roles)
+        let adminSheet = ss.getSheetByName("Admin");
+        if (!adminSheet) {
+            adminSheet = ss.insertSheet("Admin");
+            adminSheet.appendRow(["Username", "Password", "Name", "Role", "Email", "Last Update"]);
+            adminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "automationbyanil@gmail.com", new Date()]);
+            adminSheet.appendRow(["Radhika", "4566", "Radhika Chahar", "User", "aniratha32@gmail.com", new Date()]);
+            report.newTablesCreated.push("Admin");
+        }
+        adminSheet.setFrozenRows(1);
+        adminSheet.getRange(1, 1, 1, 6)
+            .setFontWeight("bold")
+            .setBackground("#3b4252")
+            .setFontColor("#ffffff");
+        report.tablesVerified.push("Admin");
+
+        // 6. Ensure 'Trash' table (Soft-deleted records archive)
+        ensureTrashSheet(ss);
+        let trashSheet = ss.getSheetByName("Trash");
+        if (trashSheet) {
+            trashSheet.setFrozenRows(1);
+            trashSheet.getRange(1, 1, 1, 11)
+                .setFontWeight("bold")
+                .setBackground("#5c1d1d")
+                .setFontColor("#ffffff");
+            report.tablesVerified.push("Trash");
+        }
+
+        // 7. Ensure 'Login' table (Audit & Access Log)
+        let loginSheet = ss.getSheetByName("Login");
+        if (!loginSheet) {
+            loginSheet = ss.insertSheet("Login");
+            loginSheet.appendRow(["Timestamp", "Action", "Details", "Affected ID", "User", "Ref", "Name"]);
+            report.newTablesCreated.push("Login");
+        }
+        loginSheet.setFrozenRows(1);
+        loginSheet.getRange(1, 1, 1, 7)
+            .setFontWeight("bold")
+            .setBackground("#234e52")
+            .setFontColor("#ffffff");
+        report.tablesVerified.push("Login");
+
+        // 8. Synchronize all month data into the master 'Data' table
+        report.totalRecordsIndexed = syncAllMonthsToDataTable(ss);
+
+        SpreadsheetApp.flush();
+
+        return {
+            success: true,
+            message: "Google Sheet successfully structured as a robust relational database.",
+            report: report
+        };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+/**
+ * Synchronizes and indexes all transactions from all 12 month tables into the
+ * master 'Data' table for ultra-fast queries and aggregate reporting.
+ */
+function syncAllMonthsToDataTable(ss) {
+    if (!ss) ss = SpreadsheetApp.openById(MAIN_ID);
+    const dataSheet = ss.getSheetByName("Data");
+    if (!dataSheet) return 0;
+
+    let consolidatedRows = [];
+    let seenIds = new Set();
+
+    MONTHS.forEach(month => {
+        const sheet = ss.getSheetByName(month);
+        if (!sheet || sheet.getLastRow() <= 1) return;
+
+        const numRows = sheet.getLastRow() - 1;
+        const vals = sheet.getRange(2, 1, numRows, 8).getValues();
+
+        for (let i = 0; i < vals.length; i++) {
+            const row = vals[i];
+            const item = (row[4] || '').toString().trim();
+            const amount = parseFloat(row[5]) || 0;
+            // Skip blank records
+            if (!item && !amount) continue;
+
+            const uid = (row[1] || '').toString().trim();
+            const cleanUid = stripEmojiFromUniqueId(uid) || `${consolidatedRows.length + 1}-${stripEmojiIcon(item)}`;
+
+            if (!seenIds.has(cleanUid)) {
+                seenIds.add(cleanUid);
+                consolidatedRows.push([
+                    consolidatedRows.length + 1,
+                    cleanUid,
+                    row[2],
+                    row[3] || month,
+                    stripEmojiIcon(item),
+                    amount,
+                    row[6] || '',
+                    row[7] || ''
+                ]);
+            }
+        }
+    });
+
+    // Clear existing data rows in 'Data'
+    const lastRow = dataSheet.getLastRow();
+    if (lastRow > 1) {
+        dataSheet.getRange(2, 1, lastRow - 1, 8).clearContent();
+    }
+
+    if (consolidatedRows.length > 0) {
+        if (dataSheet.getMaxRows() < consolidatedRows.length + 1) {
+            dataSheet.insertRowsAfter(dataSheet.getMaxRows(), consolidatedRows.length + 1 - dataSheet.getMaxRows());
+        }
+        dataSheet.getRange(2, 1, consolidatedRows.length, 8).setValues(consolidatedRows);
+    }
+
+    return consolidatedRows.length;
 }
 
 /**
