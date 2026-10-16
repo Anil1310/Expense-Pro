@@ -7483,8 +7483,6 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: 100dvh !important;
             overflow: visible !important;
         }
-    }
-
     /* ── PDF Preview Modal (Base Desktop & Laptop) ── */
     #pdfPreviewModal .modal-dialog {
         max-width: 95%;
@@ -10976,14 +10974,7 @@ Expense Tracker Pro: 2026 JavaScript Code
     function handleItemsListData(items) {
         itemsList = (items || []).map(item => {
             if (!item || typeof item !== 'string') return item;
-            const trimmed = item.trim();
-            // If already starts with an emoji or special symbol, keep as is
-            if (/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2600-\u27BF])/u.test(trimmed)) {
-                return trimmed;
-            }
-            // Auto-enrich item missing icon from ITEM_ICON_MAP
-            const icon = (typeof getIconForItem === 'function') ? getIconForItem(trimmed) : '';
-            return icon || trimmed;
+            return getItemDisplayName(item.trim());
         });
         populateItemsDropdown();
         populateEnhancedItemFilter();
@@ -11024,7 +11015,14 @@ Expense Tracker Pro: 2026 JavaScript Code
     }
 
     function getItemDisplayName(item) {
-        return item.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\u2600-\u27BF\uFE0F\uFE0E\u200D\u{1F3FB}-\u{1F3FF}]+\s*/u, '');
+        if (!item) return '';
+        var str = item.toString().trim();
+        str = str.replace(/^[\s\uD800-\uDBFF\uDC00-\uDFFF\u2600-\u27BF\uFE00-\uFE0F\u200D\u2000-\u206F\u2B50\u231A-\u23FA\u25A0-\u25FF\u2B00-\u2BFF\u2190-\u21FF\u2300-\u23FF\u2900-\u297F]+/, '');
+        str = str.replace(/^[^\w\s"'(+\-\u0900-\u097F]+/u, '');
+        try {
+            str = str.replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji}\s]+/u, '');
+        } catch (e) {}
+        return str.trim();
     }
 
     function renderResults(list) {
@@ -11313,25 +11311,11 @@ Expense Tracker Pro: 2026 JavaScript Code
         const searchInput = document.getElementById('itemSearchInput');
         const mainInput = document.getElementById('itemList');
         const resultsContainer = document.getElementById('autocompleteResults');
-        const creditInput = document.getElementById('credit');
 
         if (searchInput) searchInput.value = getItemDisplayName(name);
         if (mainInput) mainInput.value = getItemDisplayName(name);
         if (resultsContainer) resultsContainer.classList.add('d-none');
         activeItemIndex = -1;
-
-        // ── Auto-fill Credit & Remark with matching icon ──────────────────────
-        if (creditInput) {
-            const icon = getIconForItem(name);
-            if (icon) {
-                creditInput.value = icon;
-                // Brief highlight to draw attention
-                creditInput.style.transition = 'background 0.4s';
-                creditInput.style.background = '#fef9c3';
-                setTimeout(() => { creditInput.style.background = ''; }, 800);
-            }
-        }
-        // ─────────────────────────────────────────────────────────────────────
     }
 
     document.addEventListener('click', function (e) {
@@ -11764,6 +11748,7 @@ Expense Tracker Pro: 2026 JavaScript Code
         const total = (data || []).length;
         const unseen = Math.max(0, total - lastSeen);
         const uncleared = Math.max(0, total - lastCleared);
+        const newlyAvailable = Math.max(0, Math.min(unseen, uncleared));
 
         const badge = document.getElementById(`${type}-notification-count`);
         if (badge) {
@@ -11773,10 +11758,10 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         const list = document.getElementById(`${type}-notification-list`);
         if (list) {
-            const maxToShow = Math.min(uncleared, 8);
-            const latest = data.slice(0, maxToShow); // Only show uncleared notifications, up to 8
+            const maxToShow = Math.min(newlyAvailable, 8);
+            const latest = data.slice(0, maxToShow); // Only show the newest unread notifications, up to 8
             if (latest.length === 0) {
-                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No recent records.</div>`;
+                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No new notifications.</div>`;
             } else {
                 let html = `
                     <div class="clear-notifications-header" style="padding: 6px 10px; text-align: right; background: #000; border-bottom: 2px solid rgba(255,193,7,0.3);">
@@ -12522,7 +12507,7 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         const uniqueIdValue = uniqueId.value;
         const monthValue = month.value || CURRENT_MONTH;
-        const itemListValue = itemList.value;
+        const itemListValue = getItemDisplayName(itemList.value).trim();
         const amountValue = parseFloat(amount.value);
         const dateValue = date.value;
         const creditValue = credit.value;
