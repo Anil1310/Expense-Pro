@@ -2575,6 +2575,7 @@ Expense Tracker Pro: 2026 JavaScript Code
         const total = (data || []).length;
         const unseen = Math.max(0, total - lastSeen);
         const uncleared = Math.max(0, total - lastCleared);
+        const newlyAvailable = Math.max(0, Math.min(unseen, uncleared));
 
         const badge = document.getElementById(`${type}-notification-count`);
         if (badge) {
@@ -2584,10 +2585,10 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         const list = document.getElementById(`${type}-notification-list`);
         if (list) {
-            const maxToShow = Math.min(uncleared, 8);
-            const latest = data.slice(0, maxToShow); // Only show uncleared notifications, up to 8
+            const maxToShow = Math.min(newlyAvailable, 8);
+            const latest = data.slice(0, maxToShow); // Only show the newest unread notifications, up to 8
             if (latest.length === 0) {
-                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No recent records.</div>`;
+                list.innerHTML = `<div style="padding: 12px; font-size: 0.75rem; text-align: center; opacity: 0.6;">No new notifications.</div>`;
             } else {
                 let html = `
                     <div class="clear-notifications-header" style="padding: 6px 10px; text-align: right; background: #000; border-bottom: 2px solid rgba(255,193,7,0.3);">

@@ -11,6 +11,7 @@ import datetime
 import shutil
 import json
 import re
+import webbrowser
 from urllib.parse import urlencode, urlparse
 
 # Color Codes
@@ -216,12 +217,8 @@ def get_vercel_project_name(project_dir):
 def open_url_in_browser(url):
     """Open URL cross-platform."""
     try:
-        if sys.platform == "win32":
-            os.startfile(url)
-        elif sys.platform == "darwin":
-            subprocess.run(["open", url])
-        else:
-            subprocess.run(["xdg-open", url])
+        if not webbrowser.open(url):
+            print(f"{RED}Could not open browser for: {url}{RESET}")
     except Exception as e:
         print(f"{RED}Could not open browser: {e}{RESET}")
 
