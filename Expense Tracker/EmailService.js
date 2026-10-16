@@ -2,24 +2,24 @@
  * Automated Monthly Report Trigger
  * This can be set to run daily or monthly in Google Apps Script Triggers.
  */
-function sendMonthlyReportAuto() {
+function sendMonthlyReportAuto(customMonth, customEmail) {
   const now = new Date();
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const currentMonth = months[now.getMonth()];
+  const currentMonth = customMonth || months[now.getMonth()];
   const currentYear = now.getFullYear();
 
   const data = getMonthlyData(currentMonth);
-  if (!data || data.tableData.length === 0) return "No data to send";
+  if (!data || data.tableData.length === 0) return { success: false, error: "No data found for " + currentMonth };
 
-  const userName = "Automated System";
-  const targetEmail = "automationbyanil@gmail.com";
-  const fileName = `Auto_Report_${currentMonth}_${currentYear}`;
+  const userName = "Expenses Pro";
+  const targetEmail = customEmail || "anil.chahar170@gmail.com";
+  const fileName = `Expense_Report_${currentMonth}_${currentYear}`;
 
   const summary = `📅 Month: ${currentMonth} ${currentYear}\n` +
     `💸 Total Expenses: ₹${data.totalExpenses}\n` +
     `📂 Categories: ${data.uniqueCategories}\n` +
     `📆 Active Days: ${data.daysWithExpenses}\n` +
-    `👤 Status: Automatic Backup`;
+    `👤 Status: Monthly Statement`;
 
   // Build the HTML for PDF (Backend version of the dashboard logic)
   const html = buildBackendReportHTML(data, currentMonth, currentYear, userName);
@@ -103,7 +103,7 @@ function buildBackendReportHTML(data, month, year, userName) {
  * Generates a PDF from HTML and sends it via email.
  */
 function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
-  const finalRecipient = recipientEmail || "automationbyanil@gmail.com";
+  const finalRecipient = recipientEmail || "anil.chahar170@gmail.com";
 
   try {
     const sanitizedHtml = `<html><body style="font-family: Arial, sans-serif;">${htmlContent}</body></html>`;
@@ -172,5 +172,5 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
  * to trigger the Google OAuth Authorization dialog for Gmail.
  */
 function triggerGmailPermissionCheck() {
-  GmailApp.sendEmail("automationbyanil@gmail.com", "Expenses Pro Scope Authorization", "Gmail permissions authorized successfully!");
+  GmailApp.sendEmail("anil.chahar170@gmail.com", "Expenses Pro Scope Authorization", "Gmail permissions authorized successfully!");
 }

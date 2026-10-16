@@ -171,6 +171,7 @@ function doPost(e) {
             saveProfilePhoto: (...args) => saveProfilePhoto(...args),
             cleanAllColumnEIconsAndStopTriggers: (...args) => cleanAllColumnEIconsAndStopTriggers(...args),
             cleanAndDeduplicateList: (...args) => cleanAndDeduplicateList(...args),
+            sendMonthlyReportAuto: (...args) => sendMonthlyReportAuto(...args),
             setupDatabaseSchema: (...args) => setupDatabaseSchema(...args),
             syncAllMonthsToDataTable: (...args) => syncAllMonthsToDataTable(...args)
         };
@@ -1037,7 +1038,7 @@ function checkLogin(username, password) {
             // Create a default Admin sheet if it doesn't exist
             AdminSheet = ss.insertSheet("Admin");
             AdminSheet.appendRow(["Username", "Password", "Name", "Role", "Email", "Last Update"]);
-            AdminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "automationbyanil@gmail.com", new Date()]);
+            AdminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "anil.chahar170@gmail.com", new Date()]);
             AdminSheet.appendRow(["Radhika", "4566", "Radhika Chahar", "User", "aniratha32@gmail.com", new Date()]);
 
             // Format header
@@ -1080,7 +1081,7 @@ function checkLogin(username, password) {
             const storedPassword = userRow[passwordIdx] ? userRow[passwordIdx].toString().trim() : "";
             const storedName = userRow[nameIdx] ? userRow[nameIdx].toString().trim() : storedUsername;
             const storedRole = userRow[roleIdx] ? userRow[roleIdx].toString().trim() : "User";
-            const storedEmail = emailIdx !== -1 && userRow[emailIdx] ? userRow[emailIdx].toString().trim() : "automationbyanil@gmail.com";
+            const storedEmail = emailIdx !== -1 && userRow[emailIdx] ? userRow[emailIdx].toString().trim() : "anil.chahar170@gmail.com";
 
             if (storedUsername.toLowerCase() === username.toLowerCase()) {
                 if (storedPassword === password) {
@@ -2546,9 +2547,16 @@ function setupDatabaseSchema() {
         if (!adminSheet) {
             adminSheet = ss.insertSheet("Admin");
             adminSheet.appendRow(["Username", "Password", "Name", "Role", "Email", "Last Update"]);
-            adminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "automationbyanil@gmail.com", new Date()]);
+            adminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "anil.chahar170@gmail.com", new Date()]);
             adminSheet.appendRow(["Radhika", "4566", "Radhika Chahar", "User", "aniratha32@gmail.com", new Date()]);
             report.newTablesCreated.push("Admin");
+        } else if (adminSheet.getLastRow() > 1) {
+            const adminVals = adminSheet.getRange(2, 1, adminSheet.getLastRow() - 1, Math.min(6, adminSheet.getLastColumn())).getValues();
+            for (let r = 0; r < adminVals.length; r++) {
+                if ((adminVals[r][0] || '').toString().toLowerCase().includes('anil')) {
+                    adminSheet.getRange(r + 2, 5).setValue("anil.chahar170@gmail.com");
+                }
+            }
         }
         adminSheet.setFrozenRows(1);
         adminSheet.getRange(1, 1, 1, 6)
