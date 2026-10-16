@@ -9061,7 +9061,7 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
           <div class="pdf-modal-actions">
             <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-2 pdf-scroll-btn me-1" id="pdfScrollBottomBtn" onclick="togglePdfScroll()" title="Scroll to bottom / top">
               <i class="fas fa-arrow-down" id="pdfScrollIcon"></i>
-              <span class="d-none d-sm-inline ms-1" id="pdfScrollText">Bottom</span>
+              <span class="ms-1 fw-bold" id="pdfScrollText" style="font-size: 0.75rem;">Last</span>
             </button>
             <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold pdf-print-btn" onclick="printPreviewPDF()">
               <i class="fas fa-print me-1"></i><span class="pdf-btn-label">Print / Save PDF</span>
@@ -9070,7 +9070,7 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
           </div>
         </div>
         <div class="modal-body p-0">
-          <iframe id="pdfPreviewIframe" title="PDF Statement Preview"></iframe>
+          <iframe id="pdfPreviewIframe" title="PDF Statement Preview" scrolling="yes"></iframe>
         </div>
       </div>
     </div>
@@ -13159,7 +13159,7 @@ Expense Tracker Pro: 2026 JavaScript Code
       font-size: 11px; 
       background: #f1f5f9; 
       min-height: 100%;
-      overflow-y: auto !important;
+      overflow-y: visible !important;
       -webkit-overflow-scrolling: touch !important;
     }
     .page { 
@@ -13238,6 +13238,7 @@ Expense Tracker Pro: 2026 JavaScript Code
     .table-responsive-wrapper { border: none !important; border-radius: 0 !important; overflow: visible !important; margin-bottom: 20px !important; }
     .table-responsive-wrapper table { min-width: unset !important; }
     .footer { display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
+    #floatScrollBtn { display: none !important; }
   }
 </style>
 </head>
@@ -13303,6 +13304,35 @@ Expense Tracker Pro: 2026 JavaScript Code
     <div>Report ID: EXP-${Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
   </div>
 </div>
+  <button id="floatScrollBtn" onclick="toggleReportScroll()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #0f172a; color: #ffffff; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 30px; padding: 10px 18px; font-weight: 700; font-size: 0.8rem; box-shadow: 0 6px 20px rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s ease;">
+    <span id="floatScrollIcon" style="font-size: 0.9rem;">⬇</span> <span id="floatScrollText">Jump to Last (#${dataSource.length})</span>
+  </button>
+  <script>
+    function toggleReportScroll() {
+      var scrollTarget = document.scrollingElement || document.documentElement || document.body;
+      var isNearBottom = (scrollTarget.scrollTop + window.innerHeight) >= (scrollTarget.scrollHeight - 250);
+      if (isNearBottom) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: scrollTarget.scrollHeight, behavior: 'smooth' });
+      }
+    }
+    window.addEventListener('scroll', function() {
+      var btn = document.getElementById('floatScrollBtn');
+      var icon = document.getElementById('floatScrollIcon');
+      var text = document.getElementById('floatScrollText');
+      if (!btn) return;
+      var scrollTarget = document.scrollingElement || document.documentElement || document.body;
+      var isNearBottom = (scrollTarget.scrollTop + window.innerHeight) >= (scrollTarget.scrollHeight - 250);
+      if (isNearBottom) {
+        if (icon) icon.textContent = '⬆';
+        if (text) text.textContent = 'Jump to Top (#1)';
+      } else {
+        if (icon) icon.textContent = '⬇';
+        if (text) text.textContent = 'Jump to Last (#' + ${dataSource.length} + ')';
+      }
+    }, { passive: true });
+  <\/script>
 </body>
 </html>`,
             stats: { totalExpenses, totalCategories, totalDays, userName }
@@ -13328,7 +13358,7 @@ Expense Tracker Pro: 2026 JavaScript Code
         const scrollIcon = document.getElementById('pdfScrollIcon');
         const scrollText = document.getElementById('pdfScrollText');
         if (scrollIcon) scrollIcon.className = 'fas fa-arrow-down';
-        if (scrollText) scrollText.textContent = 'Bottom';
+        if (scrollText) scrollText.textContent = 'Last';
 
         if (modalEl && iframe) {
             // Write the generated HTML into the iframe
@@ -13353,7 +13383,7 @@ Expense Tracker Pro: 2026 JavaScript Code
                                 if (sText) sText.textContent = 'Top';
                             } else {
                                 if (sIcon) sIcon.className = 'fas fa-arrow-down';
-                                if (sText) sText.textContent = 'Bottom';
+                                if (sText) sText.textContent = 'Last';
                             }
                         }, { passive: true });
                     }
@@ -13395,9 +13425,9 @@ Expense Tracker Pro: 2026 JavaScript Code
                 // Scroll to top
                 win.scrollTo({ top: 0, behavior: 'smooth' });
                 if (scrollIcon) scrollIcon.className = 'fas fa-arrow-down';
-                if (scrollText) scrollText.textContent = 'Bottom';
+                if (scrollText) scrollText.textContent = 'Last';
             } else {
-                // Scroll to bottom (record 140)
+                // Scroll to bottom (record 150)
                 win.scrollTo({ top: scrollTarget.scrollHeight, behavior: 'smooth' });
                 if (scrollIcon) scrollIcon.className = 'fas fa-arrow-up';
                 if (scrollText) scrollText.textContent = 'Top';

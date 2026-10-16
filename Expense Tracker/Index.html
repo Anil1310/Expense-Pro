@@ -1366,7 +1366,7 @@ Expense Tracker Pro: 2026 Frontend Code
           <div class="pdf-modal-actions">
             <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-2 pdf-scroll-btn me-1" id="pdfScrollBottomBtn" onclick="togglePdfScroll()" title="Scroll to bottom / top">
               <i class="fas fa-arrow-down" id="pdfScrollIcon"></i>
-              <span class="d-none d-sm-inline ms-1" id="pdfScrollText">Bottom</span>
+              <span class="ms-1 fw-bold" id="pdfScrollText" style="font-size: 0.75rem;">Last</span>
             </button>
             <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold pdf-print-btn" onclick="printPreviewPDF()">
               <i class="fas fa-print me-1"></i><span class="pdf-btn-label">Print / Save PDF</span>
@@ -1375,7 +1375,7 @@ Expense Tracker Pro: 2026 Frontend Code
           </div>
         </div>
         <div class="modal-body p-0">
-          <iframe id="pdfPreviewIframe" title="PDF Statement Preview"></iframe>
+          <iframe id="pdfPreviewIframe" title="PDF Statement Preview" scrolling="yes"></iframe>
         </div>
       </div>
     </div>
