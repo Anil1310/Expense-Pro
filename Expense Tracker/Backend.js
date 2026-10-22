@@ -1039,7 +1039,7 @@ function checkLogin(username, password) {
             // Create a default Admin sheet if it doesn't exist
             AdminSheet = ss.insertSheet("Admin");
             AdminSheet.appendRow(["Username", "Password", "Name", "Role", "Email", "Last Update"]);
-            AdminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "automationbyanil@gmail.com", new Date()]);
+            AdminSheet.appendRow(["Anil Chahar", "4566", "Anil Chahar", "Admin", "anil.chahat170@gmail.com", new Date()]);
             AdminSheet.appendRow(["Radhika", "4566", "Radhika Chahar", "User", "aniratha32@gmail.com", new Date()]);
 
             // Format header
@@ -1082,7 +1082,7 @@ function checkLogin(username, password) {
             const storedPassword = userRow[passwordIdx] ? userRow[passwordIdx].toString().trim() : "";
             const storedName = userRow[nameIdx] ? userRow[nameIdx].toString().trim() : storedUsername;
             const storedRole = userRow[roleIdx] ? userRow[roleIdx].toString().trim() : "User";
-            const storedEmail = emailIdx !== -1 && userRow[emailIdx] ? userRow[emailIdx].toString().trim() : "automationbyanil@gmail.com";
+            const storedEmail = emailIdx !== -1 && userRow[emailIdx] ? userRow[emailIdx].toString().trim() : "anil.chahat170@gmail.com";
 
             if (storedUsername.toLowerCase() === username.toLowerCase()) {
                 if (storedPassword === password) {
