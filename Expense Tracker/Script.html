@@ -1913,6 +1913,21 @@ Expense Tracker Pro: 2026 JavaScript Code
     // ── Category → Emoji icon map ──────────────────────────────────────────────
     const ITEM_ICON_MAP = [
 
+        // ── PRIMARY CATEGORIES ───────────────────────────────────────────────
+        { keywords: ['medical', 'medicine', 'medicines', 'doctor', 'hospital', 'clinic'], icon: '💊 Medical' },
+        { keywords: ['personal care', 'personalcare'], icon: '🧴 Personal Care' },
+        { keywords: ['education', 'school fees', 'tuition'], icon: '🎓 Education' },
+        { keywords: ['baby care', 'babycare'], icon: '👶 Baby Care' },
+        { keywords: ['festivals', 'festival', 'diwali', 'holi', 'eid'], icon: '🪔 Festivals' },
+        { keywords: ['transport', 'transportation'], icon: '🚗 Transport' },
+        { keywords: ['food'], icon: '🍕 Food' },
+        { keywords: ['bills', 'bill'], icon: '🧾 Bills' },
+        { keywords: ['entertainment'], icon: '🎬 Entertainment' },
+        { keywords: ['household utilities', 'household', 'utilities', 'utility'], icon: '🧹 Household Utilities' },
+        { keywords: ['shopping'], icon: '🛍️ Shopping' },
+        { keywords: ['electronics', 'electronic'], icon: '💻 Electronics' },
+        { keywords: ['other', 'others'], icon: '📌 Other' },
+
         // ── EXACT ITEM LIST (highest priority) ────────────────────────────────
         // Education & Admission
         { keywords: ['admission'], icon: '🎓 Admission' },
@@ -2137,17 +2152,113 @@ Expense Tracker Pro: 2026 JavaScript Code
         }
         return '';
     }
-    // ──────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the category formatted with an appropriate icon and name (e.g. "📦 Amazon").
+     */
+    function getCategoryWithIcon(name) {
+        if (!name) return '';
+        const cleanName = getItemDisplayName(name);
+        if (!cleanName) return '';
+
+        // Check if original name already starts with an emoji/icon
+        const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/;
+        if (emojiRegex.test(name.substring(0, 5))) {
+            return name.trim();
+        }
+
+        const lower = cleanName.toLowerCase().trim();
+
+        const PRIMARY_CATEGORY_MAP = {
+            'medical': '💊 Medical',
+            'medicine': '💊 Medical',
+            'medicines': '💊 Medical',
+            'personal care': '🧴 Personal Care',
+            'personalcare': '🧴 Personal Care',
+            'education': '🎓 Education',
+            'baby care': '👶 Baby Care',
+            'babycare': '👶 Baby Care',
+            'festivals': '🪔 Festivals',
+            'festival': '🪔 Festivals',
+            'transport': '🚗 Transport',
+            'transportation': '🚗 Transport',
+            'food': '🍕 Food',
+            'bills': '🧾 Bills',
+            'bill': '🧾 Bills',
+            'entertainment': '🎬 Entertainment',
+            'household utilities': '🧹 Household Utilities',
+            'household': '🧹 Household Utilities',
+            'utilities': '🧹 Household Utilities',
+            'utility': '🧹 Household Utilities',
+            'shopping': '🛍️ Shopping',
+            'electronics': '💻 Electronics',
+            'electronic': '💻 Electronics',
+            'other': '📌 Other',
+            'others': '📌 Other'
+        };
+
+        if (PRIMARY_CATEGORY_MAP[lower]) {
+            return PRIMARY_CATEGORY_MAP[lower];
+        }
+
+        // Check ITEM_ICON_MAP for exact or keyword match
+        const mapped = getIconForItem(cleanName);
+        if (mapped) {
+            return mapped;
+        }
+
+        // Smart keyword fallback
+        const lower = cleanName.toLowerCase();
+        if (lower.includes('fruit') || lower.includes('apple') || lower.includes('mango') || lower.includes('banana')) return '🍎 ' + cleanName;
+        if (lower.includes('food') || lower.includes('lunch') || lower.includes('dinner') || lower.includes('meal') || lower.includes('restaurant') || lower.includes('swiggy') || lower.includes('zomato')) return '🍕 ' + cleanName;
+        if (lower.includes('veg') || lower.includes('sabzi')) return '🥦 ' + cleanName;
+        if (lower.includes('milk') || lower.includes('dairy') || lower.includes('paneer') || lower.includes('curd')) return '🥛 ' + cleanName;
+        if (lower.includes('snack') || lower.includes('chips') || lower.includes('biscuit') || lower.includes('namkeen')) return '🍿 ' + cleanName;
+        if (lower.includes('tea') || lower.includes('chai') || lower.includes('coffee')) return '☕ ' + cleanName;
+        if (lower.includes('drink') || lower.includes('juice') || lower.includes('cold drink') || lower.includes('coke') || lower.includes('pepsi')) return '🥤 ' + cleanName;
+        if (lower.includes('med') || lower.includes('pharma') || lower.includes('doctor') || lower.includes('hospital') || lower.includes('clinic')) return '💊 ' + cleanName;
+        if (lower.includes('petrol') || lower.includes('diesel') || lower.includes('fuel') || lower.includes('gas') || lower.includes('cng')) return '⛽ ' + cleanName;
+        if (lower.includes('auto') || lower.includes('rickshaw') || lower.includes('cab') || lower.includes('uber') || lower.includes('ola')) return '🛺 ' + cleanName;
+        if (lower.includes('metro') || lower.includes('train') || lower.includes('rail')) return '🚇 ' + cleanName;
+        if (lower.includes('bus')) return '🚌 ' + cleanName;
+        if (lower.includes('rent') || lower.includes('flat') || lower.includes('room') || lower.includes('house')) return '🏠 ' + cleanName;
+        if (lower.includes('electricity') || lower.includes('bijli') || lower.includes('power') || lower.includes('bill')) return '⚡ ' + cleanName;
+        if (lower.includes('wifi') || lower.includes('internet') || lower.includes('broadband') || lower.includes('recharge') || lower.includes('mobile')) return '📶 ' + cleanName;
+        if (lower.includes('shop') || lower.includes('store') || lower.includes('mall') || lower.includes('grocery') || lower.includes('kirana')) return '🛒 ' + cleanName;
+        if (lower.includes('cloth') || lower.includes('pant') || lower.includes('shirt') || lower.includes('dress') || lower.includes('shoe')) return '👕 ' + cleanName;
+        if (lower.includes('fee') || lower.includes('school') || lower.includes('college') || lower.includes('course') || lower.includes('tutor') || lower.includes('class')) return '🏫 ' + cleanName;
+        if (lower.includes('gift')) return '🎁 ' + cleanName;
+        if (lower.includes('puja') || lower.includes('pooja') || lower.includes('mandir') || lower.includes('temple')) return '🙏 ' + cleanName;
+        if (lower.includes('salon') || lower.includes('hair') || lower.includes('barber') || lower.includes('spa') || lower.includes('beauty')) return '✂️ ' + cleanName;
+        if (lower.includes('gym') || lower.includes('fitness') || lower.includes('workout')) return '💪 ' + cleanName;
+
+        return '📝 ' + cleanName;
+    }
+    window.getCategoryWithIcon = getCategoryWithIcon;
+
+    function autoUpdateCreditRemark(name) {
+        const creditInput = document.getElementById('credit');
+        if (creditInput && name && name.trim()) {
+            creditInput.value = getCategoryWithIcon(name);
+        }
+    }
+    window.autoUpdateCreditRemark = autoUpdateCreditRemark;
 
     function selectItem(name) {
         const searchInput = document.getElementById('itemSearchInput');
         const mainInput = document.getElementById('itemList');
         const resultsContainer = document.getElementById('autocompleteResults');
+        const creditInput = document.getElementById('credit');
 
-        if (searchInput) searchInput.value = getItemDisplayName(name);
-        if (mainInput) mainInput.value = getItemDisplayName(name);
+        const cleanName = getItemDisplayName(name);
+        if (searchInput) searchInput.value = cleanName;
+        if (mainInput) mainInput.value = cleanName;
         if (resultsContainer) resultsContainer.classList.add('d-none');
         activeItemIndex = -1;
+
+        // Auto-select category with icon in Credit & Remark
+        if (creditInput) {
+            creditInput.value = getCategoryWithIcon(name || cleanName);
+        }
     }
 
     document.addEventListener('click', function (e) {
@@ -2175,10 +2286,12 @@ Expense Tracker Pro: 2026 JavaScript Code
     function handleItemSelection() {
         const dropdown = document.getElementById('itemListDropdown');
         const textInput = document.getElementById('itemList');
+        const creditInput = document.getElementById('credit');
         if (!dropdown || !textInput) return;
 
         if (dropdown.value) {
             textInput.value = getItemDisplayName(dropdown.value);
+            if (creditInput) creditInput.value = getCategoryWithIcon(dropdown.value);
             textInput.focus();
         }
     }
@@ -3774,19 +3887,19 @@ Expense Tracker Pro: 2026 JavaScript Code
             if (emojiRegex.test(text.substring(0, 5))) return "";
 
             const r = text.toLowerCase();
-            if (r.includes('fruit')) return '🍎 ';
-            if (r.includes('food') || r.includes('lunch') || r.includes('dinner')) return '🍕 ';
-            if (r.includes('drink') || r.includes('coldr')) return '🥤 ';
-            if (r.includes('auto') || r.includes('taxi')) return '🛺 ';
-            if (r.includes('metro') || r.includes('train')) return '🚇 ';
-            if (r.includes('vegetable')) return '🥦 ';
-            if (r.includes('ice') || r.includes('cream')) return '🍦 ';
-            if (r.includes('fuel') || r.includes('petrol')) return '⛽ ';
-            if (r.includes('rent')) return '🏠 ';
-            if (r.includes('milk')) return '🥛 ';
-            if (r.includes('medicine')) return '💊 ';
-            if (r.includes('snack')) return '🍿 ';
-            if (r.includes('grocery')) return '🛒 ';
+            if (r.includes('medical') || r.includes('medicine') || r.includes('doctor') || r.includes('hospital')) return '💊 ';
+            if (r.includes('personal care') || r.includes('personal')) return '🧴 ';
+            if (r.includes('education') || r.includes('school') || r.includes('college') || r.includes('tuition')) return '🎓 ';
+            if (r.includes('baby care') || r.includes('baby') || r.includes('diaper')) return '👶 ';
+            if (r.includes('festival') || r.includes('diwali') || r.includes('holi') || r.includes('eid')) return '🪔 ';
+            if (r.includes('transport') || r.includes('auto') || r.includes('petrol') || r.includes('fuel') || r.includes('metro') || r.includes('taxi')) return '🚗 ';
+            if (r.includes('food') || r.includes('lunch') || r.includes('dinner') || r.includes('fruit') || r.includes('veg') || r.includes('milk') || r.includes('snack')) return '🍕 ';
+            if (r.includes('bills') || r.includes('bill') || r.includes('rent') || r.includes('electricity') || r.includes('water')) return '🧾 ';
+            if (r.includes('entertainment') || r.includes('movie') || r.includes('cinema') || r.includes('game')) return '🎬 ';
+            if (r.includes('household utilities') || r.includes('household') || r.includes('utilit')) return '🧹 ';
+            if (r.includes('shopping') || r.includes('amazon') || r.includes('grocery') || r.includes('cloth')) return '🛍️ ';
+            if (r.includes('electronics') || r.includes('electronic') || r.includes('tv') || r.includes('mobile') || r.includes('laptop')) return '💻 ';
+            if (r.includes('other')) return '📌 ';
             return '📝 ';
         };
 
@@ -3863,6 +3976,12 @@ Expense Tracker Pro: 2026 JavaScript Code
 
         return {
             title: `Expense_Report_${month}_${year}`,
+            stats: {
+                totalExpenses,
+                totalCategories,
+                totalDays,
+                userName
+            },
             html: `<!DOCTYPE html>
 <html>
 <head>
@@ -3987,7 +4106,7 @@ Expense Tracker Pro: 2026 JavaScript Code
   <div class="report-header">
     <div>
       <div class="brand">💰 EXPENSE<span>PRO</span></div>
-      <div style="font-size:0.8rem;color:#64748b;margin-top:4px;">Premium Financial Statement</div>
+      <div style="font-size:0.8rem;color:#2563eb;font-weight:600;margin-top:4px;">Premium Financial Statement</div>
     </div>
     <div class="meta-info">
       <div class="report-title">Monthly Expense Statement</div>
@@ -4218,7 +4337,13 @@ Expense Tracker Pro: 2026 JavaScript Code
          const month = monthName || CURRENT_MONTH;
          const year = CURRENT_YEAR;
          const reportData = getReportHTMLContent(month, year);
-         const { stats } = reportData;
+         const stats = (reportData && reportData.stats) ? reportData.stats : {
+             totalExpenses: '₹0',
+             totalCategories: 0,
+             totalDays: 0,
+             userName: (currentUser && currentUser.name) ? currentUser.name : 'Expense Pro'
+         };
+         const reportHtml = (reportData && reportData.html) ? reportData.html : '';
 
          // If btnElement is not passed, determine it dynamically
          let btn = btnElement;
@@ -4259,7 +4384,7 @@ Expense Tracker Pro: 2026 JavaScript Code
                  btn.disabled = false;
              }
              showModernAlert("Server Error", "Server error sending mail: " + err, "danger", 5000);
-         }).generateAndEmailPDF(reportData.html, fileName, targetEmail, summary);
+         }).generateAndEmailPDF(reportHtml, fileName, targetEmail, summary);
      }
 
     function handleReportsMonthSelect() {

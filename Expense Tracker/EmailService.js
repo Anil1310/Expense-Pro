@@ -101,7 +101,7 @@ function buildBackendReportHTML(data, month, year, userName) {
   <div class="report-header">
     <div>
       <div class="brand">💰 EXPENSE<span>PRO</span></div>
-      <div style="font-size:0.8rem;color:#64748b;margin-top:4px;">Premium Financial Statement</div>
+      <div style="font-size:0.8rem;color:#2563eb;font-weight:600;margin-top:4px;">Premium Financial Statement</div>
     </div>
     <div style="text-align:right;">
       <div style="font-size:1.2rem;font-weight:800;color:#0f172a;">Monthly Expense Statement</div>
@@ -207,7 +207,7 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: #0f172a; padding: 30px; text-align: center;">
         <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: -1px; display: block;">💰 EXPENSE<span style="color:#3b82f6;">PRO</span></h1>
-        <p style="color: #94a3b8; margin: 5px 0 0; font-size: 14px;">Premium Financial Statement</p>
+        <p style="color: #3b82f6; margin: 5px 0 0; font-size: 14px; font-weight: 600;">Premium Financial Statement</p>
       </div>
       
       <div style="padding: 30px; color: #1e293b;">

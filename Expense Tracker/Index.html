@@ -1171,7 +1171,8 @@ Expense Tracker Pro: 2026 Frontend Code
                 List</label>
               <div class="position-relative">
                 <input type="text" id="itemSearchInput" class="form-control" placeholder="Select Items"
-                  oninput="filterItemsDropdown()" onfocus="showInitialItems()" onkeydown="handleItemKeyDown(event)"
+                  oninput="filterItemsDropdown(); autoUpdateCreditRemark(this.value);" onfocus="showInitialItems()" onkeydown="handleItemKeyDown(event)"
+                  onblur="if(this.value) autoUpdateCreditRemark(this.value);"
                   autocomplete="off"
                   style="height: 34px; border-radius: 8px; border: 2px solid #cbd5e1; padding: 0 12px; font-size: 0.85rem; width: 100%; transition: all 0.2s; background: #fff;">
 
@@ -1185,7 +1186,7 @@ Expense Tracker Pro: 2026 Frontend Code
             </div>
             <div class="mb-2">
               <label for="itemList" class="form-label">Item List</label>
-              <input type="text" class="form-control" id="itemList" placeholder="Enter item name" required>
+              <input type="text" class="form-control" id="itemList" placeholder="Enter item name" oninput="autoUpdateCreditRemark(this.value)" required>
             </div>
             <div class="mb-2">
               <label for="amount" class="form-label">Amount</label>
