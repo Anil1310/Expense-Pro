@@ -12,7 +12,7 @@ function sendMonthlyReportAuto() {
   if (!data || data.tableData.length === 0) return "No data to send";
 
   const userName = "Automated System";
-  const targetEmail = "anil.chahat170@gmail.com";
+  const targetEmail = "anil.chahar170@gmail.com";
   const fileName = `Auto_Report_${currentMonth}_${currentYear}`;
 
   const summary = `📅 Month: ${currentMonth} ${currentYear}\n` +
@@ -153,7 +153,7 @@ function buildBackendReportHTML(data, month, year, userName) {
  * Generates a PDF from HTML and sends it via email.
  */
 function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
-  const finalRecipient = recipientEmail || "anil.chahat170@gmail.com";
+  const finalRecipient = recipientEmail || "anil.chahar170@gmail.com";
 
   try {
     const fullHtml = (htmlContent && htmlContent.includes('<html'))
@@ -224,5 +224,5 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
  * to trigger the Google OAuth Authorization dialog for Gmail.
  */
 function triggerGmailPermissionCheck() {
-  GmailApp.sendEmail("anil.chahat170@gmail.com", "Expenses Pro Scope Authorization", "Gmail permissions authorized successfully!");
+  GmailApp.sendEmail("anil.chahar170@gmail.com", "Expenses Pro Scope Authorization", "Gmail permissions authorized successfully!");
 }

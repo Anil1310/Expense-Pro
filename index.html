@@ -7487,15 +7487,16 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: 100dvh !important;
             overflow: visible !important;
         }
-    /* ── PDF Preview Modal (Full Screen Studio for Laptop & Desktop) ── */
+    /* ── PDF Preview Modal (Full Page on Laptop & Mobile) ── */
     #pdfPreviewModal {
         padding: 0 !important;
         overflow: hidden !important;
+        inset: 0 !important;
     }
 
     #pdfPreviewModal .modal-dialog {
-        max-width: 100vw !important;
         width: 100vw !important;
+        max-width: 100vw !important;
         height: 100% !important;
         height: 100vh !important;
         height: 100dvh !important;
@@ -7503,7 +7504,10 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         margin: 0 !important;
         padding: 0 !important;
         position: fixed !important;
-        inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         transform: none !important;
     }
 
@@ -7513,26 +7517,25 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         height: 100vh !important;
         height: 100dvh !important;
         max-height: 100dvh !important;
-        background: #0f172a !important;
         border-radius: 0 !important;
-        overflow: hidden;
         border: none !important;
         display: flex !important;
         flex-direction: column !important;
         box-shadow: none !important;
+        background: #ffffff !important;
     }
 
     #pdfPreviewModal .modal-header {
-        padding: 10px 20px !important;
-        background: #0f172a !important;
-        color: #ffffff !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 0 !important;
+        padding: calc(env(safe-area-inset-top, 0px) + 8px) 18px 8px 18px !important;
+        min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
+        background: linear-gradient(135deg, #090d16, #111827) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
         flex-shrink: 0 !important;
-        min-height: 52px !important;
-        border-radius: 0 !important;
+        z-index: 10 !important;
     }
 
     #pdfPreviewModal .pdf-modal-title-group {
@@ -7564,7 +7567,7 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
 
     #pdfPreviewModal .modal-title {
         font-weight: 800;
-        font-size: 1.05rem;
+        font-size: 1.05rem !important;
         letter-spacing: -0.02em;
         display: flex;
         align-items: center;
@@ -7577,14 +7580,14 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
 
     #pdfPreviewModal .pdf-month-badge {
         display: inline-block;
-        font-size: 0.72rem;
+        font-size: 0.72rem !important;
         font-weight: 700;
         background: rgba(59, 130, 246, 0.25);
         color: #93c5fd;
         border: 1px solid rgba(147, 197, 253, 0.3);
-        padding: 2px 8px;
+        padding: 2px 8px !important;
         border-radius: 20px;
-        margin-left: 8px;
+        margin-left: 8px !important;
     }
 
     #pdfPreviewModal .pdf-modal-actions {
@@ -7620,12 +7623,14 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         background-color: #3b82f6;
         border: none;
-        font-size: 0.85rem;
-        padding: 7px 16px;
+        font-size: 0.85rem !important;
+        padding: 7px 16px !important;
         display: inline-flex;
         align-items: center;
         white-space: nowrap;
         transition: all 0.2s ease;
+        border-radius: 50rem;
+        color: #ffffff;
     }
 
     #pdfPreviewModal .pdf-print-btn:hover {
@@ -7634,103 +7639,25 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
     }
 
     #pdfPreviewModal .modal-body {
-        flex: 1 1 auto;
-        height: calc(100vh - 52px);
-        overflow: hidden;
-        background: #f1f5f9;
-        position: relative;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        height: auto !important;
+        width: 100vw !important;
+        overflow: hidden !important;
+        background: #f1f5f9 !important;
         padding: 0 !important;
+        position: relative !important;
     }
 
     #pdfPreviewModal #pdfPreviewIframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-        display: block;
-        background: #f1f5f9;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    @media (max-width: 768px) {
-        /* Fullscreen Mobile View for PDF Modal (Android App optimized) */
-        #pdfPreviewModal {
-            padding: 0 !important;
-            overflow: hidden !important;
-            inset: 0 !important;
-        }
-
-        #pdfPreviewModal .modal-dialog {
-            width: 100vw !important;
-            max-width: 100vw !important;
-            height: 100% !important;
-            height: 100dvh !important;
-            max-height: 100dvh !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            transform: none !important;
-        }
-
-        #pdfPreviewModal .modal-content {
-            width: 100vw !important;
-            height: 100% !important;
-            height: 100dvh !important;
-            max-height: 100dvh !important;
-            border-radius: 0 !important;
-            border: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-            box-shadow: none !important;
-            background: #ffffff !important;
-        }
-
-        #pdfPreviewModal .modal-header {
-            border-radius: 0 !important;
-            padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 8px 14px !important;
-            min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
-            background: linear-gradient(135deg, #090d16, #111827) !important;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
-            z-index: 10 !important;
-        }
-
-        #pdfPreviewModal .modal-title {
-            font-size: 0.95rem !important;
-        }
-
-        #pdfPreviewModal .pdf-month-badge {
-            font-size: 0.68rem !important;
-            padding: 2px 6px !important;
-            margin-left: 6px !important;
-        }
-
-        #pdfPreviewModal .pdf-print-btn {
-            font-size: 0.78rem !important;
-            padding: 6px 12px !important;
-        }
-
-        #pdfPreviewModal .modal-body {
-            flex: 1 1 0% !important;
-            min-height: 0 !important;
-            height: auto !important;
-            width: 100vw !important;
-            overflow: hidden !important;
-            background: #ffffff !important;
-            padding: 0 !important;
-        }
-
-        #pdfPreviewModal #pdfPreviewIframe {
-            display: block !important;
-            flex: 1 1 0% !important;
-            min-height: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            border: none !important;
-            -webkit-overflow-scrolling: touch !important;
-        }
+        display: block !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        border: none !important;
+        background: #f1f5f9 !important;
+        -webkit-overflow-scrolling: touch !important;
     }
 </style>
 
@@ -9056,22 +8983,22 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
     </div>
   </div>
   <!-- PDF Preview Modal -->
-  <div class="modal fade pdf-preview-modal" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="pdf-modal-title-group">
-            <button type="button" class="pdf-modal-back-btn d-md-none" data-bs-dismiss="modal" aria-label="Back">
+  <div class="modal fade pdf-preview-modal" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true" style="padding: 0 !important;">
+    <div class="modal-dialog modal-fullscreen" style="width: 100vw !important; max-width: 100vw !important; height: 100% !important; height: 100vh !important; height: 100dvh !important; max-height: 100dvh !important; margin: 0 !important; padding: 0 !important; position: fixed !important; inset: 0 !important; transform: none !important;">
+      <div class="modal-content" style="width: 100vw !important; height: 100% !important; height: 100vh !important; height: 100dvh !important; max-height: 100dvh !important; border-radius: 0 !important; border: none !important; display: flex !important; flex-direction: column !important; box-shadow: none !important; background: #ffffff !important;">
+        <div class="modal-header" style="border-radius: 0 !important; padding: 10px 18px !important; min-height: 52px !important; background: linear-gradient(135deg, #090d16, #111827) !important; color: #ffffff !important; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-shrink: 0 !important; z-index: 10 !important;">
+          <div class="pdf-modal-title-group" style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="pdf-modal-back-btn" data-bs-dismiss="modal" aria-label="Back">
               <i class="fas fa-arrow-left"></i>
             </button>
-            <h5 class="modal-title" id="pdfPreviewModalLabel">
+            <h5 class="modal-title" id="pdfPreviewModalLabel" style="font-weight: 800; font-size: 1rem; color: #ffffff; margin: 0; display: flex; align-items: center;">
               <i class="fas fa-file-pdf text-danger me-2"></i>
               <span class="pdf-title-text">Statement Preview</span>
               <span id="pdfPreviewMonthBadge" class="pdf-month-badge"></span>
             </h5>
           </div>
-          <div class="pdf-modal-actions">
-            <button class="btn btn-sm rounded-pill px-3 fw-bold pdf-email-btn" id="pdfPreviewEmailBtn" onclick="sendPreviewPDFEmail()" title="Send PDF Statement to anil.chahat170@gmail.com">
+          <div class="pdf-modal-actions" style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-sm rounded-pill px-3 fw-bold pdf-email-btn" id="pdfPreviewEmailBtn" onclick="sendPreviewPDFEmail()" title="Send PDF Statement to anil.chahar170@gmail.com">
               <i class="fas fa-paper-plane me-1"></i><span class="pdf-btn-label">Send Email</span>
             </button>
             <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold pdf-print-btn" onclick="printPreviewPDF()">
@@ -9080,8 +9007,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
         </div>
-        <div class="modal-body p-0">
-          <iframe id="pdfPreviewIframe" title="PDF Statement Preview"></iframe>
+        <div class="modal-body p-0" style="flex: 1 1 0% !important; min-height: 0 !important; height: auto !important; width: 100vw !important; overflow: hidden !important; background: #f1f5f9 !important; padding: 0 !important;">
+          <iframe id="pdfPreviewIframe" title="PDF Statement Preview" style="display: block !important; flex: 1 1 0% !important; min-height: 0 !important; width: 100% !important; height: 100% !important; border: none !important; -webkit-overflow-scrolling: touch !important;"></iframe>
         </div>
       </div>
     </div>
@@ -13102,17 +13029,22 @@ Expense Tracker Pro: 2026 JavaScript Code
     color: #1e293b; 
     font-size: 11px; 
     margin: 0; 
-    padding: 16px 14px; 
+    padding: 20px; 
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
   }
   .page { 
-    padding: 24px; 
-    max-width: 1100px; 
+    padding: 28px 32px; 
+    max-width: 1250px; 
+    width: 100%;
     margin: 0 auto; 
     background: #ffffff; 
     border-radius: 14px; 
     box-shadow: 0 4px 20px rgba(0,0,0,0.06); 
+    box-sizing: border-box;
   }
   
   .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid #0f172a; margin-bottom: 25px; }
@@ -13123,14 +13055,14 @@ Expense Tracker Pro: 2026 JavaScript Code
   .report-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
   .timestamp { font-size: 0.8rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-top: 5px; }
 
-  .stats-strip { display: flex; gap: 16px; margin-bottom: 25px; }
+  .stats-strip { display: flex; gap: 16px; margin-bottom: 25px; width: 100%; }
   .stat-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; text-align: center; }
   .stat-label { font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
   .stat-value { font-size: 1.4rem; font-weight: 800; color: #0f172a; }
   
-  .report-body { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 20px; }
-  .details-column { flex: 68; min-width: 0; }
-  .summary-column { flex: 32; min-width: 0; }
+  .report-body { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 20px; width: 100%; }
+  .details-column { flex: 0 0 68%; max-width: 68%; min-width: 0; }
+  .summary-column { flex: 0 0 32%; max-width: 32%; min-width: 0; }
   
   .table-responsive-wrapper {
     width: 100%;
@@ -13351,7 +13283,7 @@ Expense Tracker Pro: 2026 JavaScript Code
     function sendPreviewPDFEmail() {
         const month = window.currentPreviewMonth || CURRENT_MONTH;
         const btn = document.getElementById('pdfPreviewEmailBtn');
-        const targetEmail = 'anil.chahat170@gmail.com';
+        const targetEmail = 'anil.chahar170@gmail.com';
         emailMonthReport(month, btn, targetEmail);
     }
     window.sendPreviewPDFEmail = sendPreviewPDFEmail;
@@ -13380,7 +13312,7 @@ Expense Tracker Pro: 2026 JavaScript Code
         }
 
         const fileName = `Expense_Report_${month}_${year}`;
-        const targetEmail = recipientEmail || (currentUser && currentUser.email ? currentUser.email : 'anil.chahat170@gmail.com');
+        const targetEmail = recipientEmail || (currentUser && currentUser.email ? currentUser.email : 'anil.chahar170@gmail.com');
 
         // Show a non-blocking modern toast immediately to confirm click registration
         showModernAlert("Sending Email", `Generating & sending report for ${month} ${year} to <strong>${targetEmail}</strong>...`, "info", 3500);
