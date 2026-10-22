@@ -108,16 +108,9 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
 
-<<<<<<< HEAD
-    if (page === 'cleanAllMonths' || page === 'stopIcons' || page === 'syncList' || page === 'updateList' || page === 'fixList' || page === 'cleanListIcons' || page === 'removeDropdowns') {
-        const result = cleanAllColumnEIconsAndStopTriggers();
-        const dropResult = removeDropdownsFromColumnE();
-        return ContentService.createTextOutput(JSON.stringify({ result: result, dropdownResult: dropResult }))
-=======
     if (page === 'removeDropdowns') {
         const result = removeDropdownsFromColumnE();
         return ContentService.createTextOutput(JSON.stringify(result))
->>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
             .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -2186,13 +2179,8 @@ function addItemToList(itemName, category) {
 }
 
 /**
-<<<<<<< HEAD
- * Removes data validation dropdowns from Column E (Item List) across all month sheets
- * (Jan to Dec) and the Data sheet so that only text remains without dropdowns.
-=======
  * Removes data validation dropdowns from the full data portion of Column E
- * across all month sheets (Jan to Dec) and the Data sheet.
->>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
+ * across all month sheets (Jan to Dec) and the Data sheet so that only text remains without dropdowns.
  */
 function removeDropdownsFromColumnE() {
     try {
@@ -2203,19 +2191,11 @@ function removeDropdownsFromColumnE() {
             try {
                 const sheet = ss.getSheetByName(month);
                 if (sheet) {
-<<<<<<< HEAD
-                    const lastRow = sheet.getLastRow();
-                    if (lastRow > 1) {
-                        const itemListRange = sheet.getRange(2, 5, lastRow - 1, 1);
-                        itemListRange.clearDataValidations();
-                        results[month] = { rows: lastRow - 1, dropdownsRemoved: true };
-=======
                     const rowCount = sheet.getMaxRows() - 1;
                     if (rowCount > 0) {
                         const itemListRange = sheet.getRange(2, 5, rowCount, 1);
                         itemListRange.clearDataValidations();
                         results[month] = { rows: rowCount, dropdownsRemoved: true };
->>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
                     }
                 }
             } catch (mErr) {
@@ -2228,19 +2208,11 @@ function removeDropdownsFromColumnE() {
         try {
             const dataSheet = ss.getSheetByName("Data");
             if (dataSheet) {
-<<<<<<< HEAD
-                const lastRow = dataSheet.getLastRow();
-                if (lastRow > 1) {
-                    const dataRange = dataSheet.getRange(2, 5, lastRow - 1, 1);
-                    dataRange.clearDataValidations();
-                    results["Data"] = { rows: lastRow - 1, dropdownsRemoved: true };
-=======
                 const rowCount = dataSheet.getMaxRows() - 1;
                 if (rowCount > 0) {
                     const dataRange = dataSheet.getRange(2, 5, rowCount, 1);
                     dataRange.clearDataValidations();
                     results["Data"] = { rows: rowCount, dropdownsRemoved: true };
->>>>>>> c13e5a1 (Auto update: 2026-10-16 19:29)
                 }
             }
         } catch (dErr) {
@@ -2257,8 +2229,6 @@ function removeDropdownsFromColumnE() {
 }
 
 /**
-<<<<<<< HEAD
-=======
  * Removes leading emoji/icons from the Item List column on each month sheet and Data.
  */
 function removeIconsFromColumnE() {
