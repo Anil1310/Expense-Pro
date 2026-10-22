@@ -153,21 +153,37 @@ function buildBackendReportHTML(data, month, year, userName) {
  * Generates a PDF from HTML and sends it via email.
  */
 function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
+  const safeFileName = String(fileName || 'Expense_Report_Active_Month');
   const finalRecipient = recipientEmail || "anil.chahar170@gmail.com";
+  const safeSummary = String(summary || 'Total Expenses: ₹0\nCategories: 0\nActive Days: 0');
+
+  // If htmlContent is not passed (e.g. running directly in Apps Script Editor), generate it automatically
+  let fullHtml = htmlContent;
+  if (!fullHtml || typeof fullHtml !== 'string' || !fullHtml.trim()) {
+    try {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const curMonth = months[new Date().getMonth()];
+      const curYear = new Date().getFullYear();
+      const data = getMonthlyData(curMonth);
+      fullHtml = buildBackendReportHTML(data, curMonth, curYear, "Admin");
+    } catch (genErr) {
+      fullHtml = `<!DOCTYPE html><html><body><h1>Expense Statement</h1><p>Generated automatically for ${finalRecipient}</p></body></html>`;
+    }
+  }
 
   try {
-    const fullHtml = (htmlContent && htmlContent.includes('<html'))
-      ? htmlContent
-      : `<!DOCTYPE html><html><body style="font-family: Arial, sans-serif;">${htmlContent}</body></html>`;
+    if (!fullHtml.includes('<html')) {
+      fullHtml = `<!DOCTYPE html><html><body style="font-family: Arial, sans-serif;">${fullHtml}</body></html>`;
+    }
 
     let pdfBlob;
     try {
       // In-memory conversion without requiring Drive file quota
-      pdfBlob = Utilities.newBlob(fullHtml, 'text/html').getAs('application/pdf').setName(fileName + '.pdf');
+      pdfBlob = Utilities.newBlob(fullHtml, 'text/html').getAs('application/pdf').setName(safeFileName + '.pdf');
     } catch (blobErr) {
       console.warn("Direct blob PDF conversion fallback to DriveApp:", blobErr.message);
       const tempFile = DriveApp.createFile('temp_' + new Date().getTime() + '.html', fullHtml, 'text/html');
-      pdfBlob = tempFile.getAs('application/pdf').setName(fileName + '.pdf');
+      pdfBlob = tempFile.getAs('application/pdf').setName(safeFileName + '.pdf');
       try { tempFile.setTrashed(true); } catch (tErr) {}
     }
 
@@ -182,22 +198,22 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
       <div style="padding: 30px; color: #1e293b;">
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Monthly Statement Attached</h2>
         <p style="font-size: 15px; line-height: 1.6; color: #475569;">Hello Anil,</p>
-        <p style="font-size: 15px; line-height: 1.6; color: #475569;">Your monthly expense statement for <strong>${fileName.replace('Expense_Report_', '').replace('Auto_Report_', '').replace(/_/g, ' ')}</strong> has been generated with complete itemized breakdown and category summaries. Please find your official statement PDF attached.</p>
+        <p style="font-size: 15px; line-height: 1.6; color: #475569;">Your monthly expense statement for <strong>${safeFileName.replace('Expense_Report_', '').replace('Auto_Report_', '').replace(/_/g, ' ')}</strong> has been generated with complete itemized breakdown and category summaries. Please find your official statement PDF attached.</p>
         
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
           <h3 style="margin-top: 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Statement Summary</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Total Volume:</td>
-              <td style="padding: 8px 0; text-align: right; color: #0f172a; font-weight: 800; font-size: 16px;">${summary.match(/Total Expenses: (.*)/) ? summary.match(/Total Expenses: (.*)/)[1] : (summary.match(/Total: (.*)/) ? summary.match(/Total: (.*)/)[1] : 'N/A')}</td>
+              <td style="padding: 8px 0; text-align: right; color: #0f172a; font-weight: 800; font-size: 16px;">${safeSummary.match(/Total Expenses: (.*)/) ? safeSummary.match(/Total Expenses: (.*)/)[1] : (safeSummary.match(/Total: (.*)/) ? safeSummary.match(/Total: (.*)/)[1] : 'N/A')}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Active Categories:</td>
-              <td style="padding: 8px 0; text-align: right; color: #0f172a; font-weight: 600;">${summary.match(/Categories: (.*)/) ? summary.match(/Categories: (.*)/)[1] : 'N/A'}</td>
+              <td style="padding: 8px 0; text-align: right; color: #0f172a; font-weight: 600;">${safeSummary.match(/Categories: (.*)/) ? safeSummary.match(/Categories: (.*)/)[1] : 'N/A'}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Active Days:</td>
-              <td style="padding: 8px 0; text-align: right; color: #0f172a; font-weight: 600;">${summary.match(/Active Days: (.*)/) ? summary.match(/Active Days: (.*)/)[1] : 'N/A'}</td>
+              <td style="padding: 8px 0; text-align: right; color: #0f172a; font-weight: 600;">${safeSummary.match(/Active Days: (.*)/) ? safeSummary.match(/Active Days: (.*)/)[1] : 'N/A'}</td>
             </tr>
           </table>
         </div>
@@ -215,14 +231,14 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
     try {
       MailApp.sendEmail({
         to: finalRecipient,
-        subject: "Expense Statement: " + fileName,
+        subject: "Expense Statement: " + safeFileName,
         htmlBody: htmlBody,
         attachments: [pdfBlob],
         name: "Expense Pro"
       });
     } catch (mailErr) {
       console.warn("MailApp error, falling back to GmailApp:", mailErr.message);
-      GmailApp.sendEmail(finalRecipient, "Expense Statement: " + fileName, "", {
+      GmailApp.sendEmail(finalRecipient, "Expense Statement: " + safeFileName, "", {
         htmlBody: htmlBody,
         attachments: [pdfBlob],
         name: "Expense Pro"

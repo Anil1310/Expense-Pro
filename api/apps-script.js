@@ -17,13 +17,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "Method not allowed." });
   }
 
-  const scriptUrl = process.env.APPS_SCRIPT_WEB_APP_URL || process.env.VITE_APPS_SCRIPT_WEB_APP_URL;
-  if (!scriptUrl) {
-    return res.status(500).json({
-      success: false,
-      error: "The APPS_SCRIPT_WEB_APP_URL environment variable is not configured on Vercel."
-    });
-  }
+  const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbys6Y0MD92ZlCR3rOjdQCSH5PqTD6NxnUOY6c2eq1h1tBEAfYnbKrbLxXZ4zfFAf3qe/exec";
+  const scriptUrl = process.env.APPS_SCRIPT_WEB_APP_URL || process.env.VITE_APPS_SCRIPT_WEB_APP_URL || DEFAULT_SCRIPT_URL;
 
   let payload = req.body;
   if (typeof payload === "string") {
