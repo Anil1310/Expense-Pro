@@ -8093,7 +8093,7 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
                   style="background: #000000 !important; color: #eab308 !important; border: none; height: 24px; width: 24px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                   <i class="fas fa-table-list" style="font-size: 0.7rem; color: #eab308 !important;"></i>
                 </button>
-                <button class="header-icon-btn" onclick="emailMonthReport(CURRENT_MONTH, this)" title="Mail Pdf" id="email-report-btn"
+                <button class="header-icon-btn" onclick="openSendEmailModal(CURRENT_MONTH, this)" title="Mail Pdf" id="email-report-btn"
                   style="background: #000000 !important; color: #3b82f6 !important; border: none; height: 24px; width: 24px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                   <i class="fas fa-envelope" style="font-size: 0.7rem; color: #3b82f6 !important;"></i>
                 </button>
@@ -8162,7 +8162,7 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
               style="background: #000000 !important; color: #ef4444 !important; border: none; height: 32px; width: 32px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 5px;">
               <i class="fas fa-file-pdf" style="font-size: 0.85rem; color: #ef4444 !important;"></i>
             </button>
-            <button class="header-icon-btn" onclick="emailMonthReport(document.getElementById('monthFilter')?.value || CURRENT_MONTH, this)" title="Mail Pdf" id="reports-email-report-btn"
+            <button class="header-icon-btn" onclick="openSendEmailModal(document.getElementById('monthFilter')?.value || CURRENT_MONTH, this)" title="Mail Pdf" id="reports-email-report-btn"
               style="background: #000000 !important; color: #3b82f6 !important; border: none; height: 32px; width: 32px; padding: 0; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 5px;">
               <i class="fas fa-envelope" style="font-size: 0.85rem; color: #3b82f6 !important;"></i>
             </button>
@@ -8998,7 +8998,7 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             </h5>
           </div>
           <div class="pdf-modal-actions" style="display: flex; align-items: center; gap: 10px;">
-            <button class="btn btn-sm rounded-pill px-3 fw-bold pdf-email-btn" id="pdfPreviewEmailBtn" onclick="sendPreviewPDFEmail()" title="Send PDF Statement to anil.chahar170@gmail.com">
+            <button class="btn btn-sm rounded-pill px-3 fw-bold pdf-email-btn" id="pdfPreviewEmailBtn" onclick="openSendEmailModal(window.currentPreviewMonth || CURRENT_MONTH, this)" title="Send Statement via Email">
               <i class="fas fa-paper-plane me-1"></i><span class="pdf-btn-label">Send Email</span>
             </button>
             <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold pdf-print-btn" onclick="printPreviewPDF()">
@@ -9009,6 +9009,64 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         </div>
         <div class="modal-body p-0" style="flex: 1 1 0% !important; min-height: 0 !important; height: auto !important; width: 100vw !important; overflow: hidden !important; background: #f1f5f9 !important; padding: 0 !important;">
           <iframe id="pdfPreviewIframe" title="PDF Statement Preview" style="display: block !important; flex: 1 1 0% !important; min-height: 0 !important; width: 100% !important; height: 100% !important; border: none !important; -webkit-overflow-scrolling: touch !important;"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Email Modal (Supports Any Recipient Email ID) -->
+  <div class="modal fade" id="sendEmailModal" tabindex="-1" aria-labelledby="sendEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+      <div class="modal-content" style="border-radius: 16px; border: 1px solid var(--glass-border); box-shadow: 0 20px 45px rgba(0,0,0,0.25); overflow: hidden; background: var(--card-bg, #ffffff);">
+        <div class="modal-header" style="background: linear-gradient(135deg, #090d16, #1e293b); color: #ffffff; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="sendEmailModalLabel" style="font-size: 1.05rem; font-weight: 700; margin: 0; color: #ffffff;">
+            <i class="fas fa-paper-plane text-primary"></i> Send Statement via Email
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding: 22px;">
+          <!-- Statement Info Badge -->
+          <div class="d-flex align-items-center justify-content-between p-2 px-3 mb-3 rounded-3" style="background: var(--light-color, #f8fafc); border: 1px solid var(--border-color, #e2e8f0);">
+            <span class="small fw-semibold text-muted d-flex align-items-center gap-2">
+              <i class="fas fa-file-invoice text-primary"></i> Report:
+            </span>
+            <span class="badge bg-primary px-3 py-2 fw-bold" id="sendEmailModalMonthBadge" style="font-size: 0.85rem;">Sep 2026</span>
+          </div>
+
+          <!-- Recipient Email Input -->
+          <div class="mb-3">
+            <label for="sendEmailRecipientInput" class="form-label fw-bold small mb-1" style="color: var(--dark-color, #0f172a);">
+              Recipient Email Address
+            </label>
+            <div class="input-group">
+              <span class="input-group-text" style="background: var(--light-color, #f8fafc); border-color: var(--border-color, #cbd5e1); color: #64748b;">
+                <i class="fas fa-envelope"></i>
+              </span>
+              <input type="email" class="form-control" id="sendEmailRecipientInput" placeholder="Enter recipient email (e.g. anil.chahar170@gmail.com)" value="anil.chahar170@gmail.com" style="border-color: var(--border-color, #cbd5e1); font-weight: 500;" required autocomplete="email">
+            </div>
+            <div class="form-text small mt-1" style="font-size: 0.75rem; color: #64748b;">
+              You can send this statement to <strong>any</strong> email ID.
+            </div>
+          </div>
+
+          <!-- Quick Autofill Chips -->
+          <div class="mb-2">
+            <div class="small fw-semibold text-muted mb-1" style="font-size: 0.75rem;">Quick Select:</div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="button" class="btn btn-sm rounded-pill" style="font-size: 0.78rem; padding: 4px 12px; background: rgba(59,130,246,0.1); color: #2563eb; border: 1px solid rgba(59,130,246,0.25); font-weight: 600;" onclick="selectRecipientChip('anil.chahar170@gmail.com')">
+                <i class="fas fa-user-check me-1"></i> anil.chahar170@gmail.com
+              </button>
+              <button type="button" class="btn btn-sm rounded-pill" style="font-size: 0.78rem; padding: 4px 12px; background: var(--light-color, #f1f5f9); color: #64748b; border: 1px solid var(--border-color, #cbd5e1);" onclick="clearRecipientInput()">
+                <i class="fas fa-edit me-1"></i> Clear / Custom Email
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 12px 20px; background: var(--light-color, #f8fafc); border-top: 1px solid var(--border-color, #e2e8f0); display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm px-4 rounded-pill fw-bold" id="sendEmailConfirmBtn" onclick="confirmSendEmailModal()">
+            <i class="fas fa-paper-plane me-1"></i> Send Mail
+          </button>
         </div>
       </div>
     </div>
@@ -9950,7 +10008,7 @@ Expense Tracker Pro: 2026 JavaScript Code
     window.hideModernToast = hideModernToast;
 
     // Modern Alertlog Modal (Delegated to non-blocking Toast)
-    function showModernAlert(title, message, type = 'success', dismissAfter = 1100) {
+    function showModernAlert(title, message, type = 'success', dismissAfter = 3500) {
         showModernToast(title, message, type, dismissAfter);
     }
 
@@ -13278,65 +13336,140 @@ Expense Tracker Pro: 2026 JavaScript Code
     window.printPreviewPDF = printPreviewPDF;
 
     /**
-     * Send email directly from Statement Preview modal
-     */
-    function sendPreviewPDFEmail() {
-        const month = window.currentPreviewMonth || CURRENT_MONTH;
-        const btn = document.getElementById('pdfPreviewEmailBtn');
-        const targetEmail = 'anil.chahar170@gmail.com';
-        emailMonthReport(month, btn, targetEmail);
-    }
-    window.sendPreviewPDFEmail = sendPreviewPDFEmail;
-
     /**
-     * Email Report Function
+     * Send Email Modal Management (Supports Any Recipient Email ID)
      */
-    function emailMonthReport(monthName, btnElement, recipientEmail) {
-        const month = monthName || CURRENT_MONTH;
-        const year = CURRENT_YEAR;
-        const reportData = getReportHTMLContent(month, year);
-        const { stats } = reportData;
+     let sendEmailCurrentTargetMonth = null;
+     let sendEmailTriggerBtn = null;
 
-        // If btnElement is not passed, determine it dynamically
-        let btn = btnElement;
-        if (!btn) {
-            const isReportsPageVisible = !document.getElementById('reports-page').classList.contains('d-none');
-            btn = isReportsPageVisible ? document.getElementById('reports-email-report-btn') : document.getElementById('email-report-btn');
-        }
+     function openSendEmailModal(monthName, btnElement) {
+         sendEmailCurrentTargetMonth = monthName || CURRENT_MONTH;
+         sendEmailTriggerBtn = btnElement || null;
 
-        let originalHtml = '';
-        if (btn) {
-            originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-        }
+         const badgeEl = document.getElementById('sendEmailModalMonthBadge');
+         if (badgeEl) {
+             badgeEl.textContent = `${sendEmailCurrentTargetMonth} ${CURRENT_YEAR}`;
+         }
 
-        const fileName = `Expense_Report_${month}_${year}`;
-        const targetEmail = recipientEmail || (currentUser && currentUser.email ? currentUser.email : 'anil.chahar170@gmail.com');
+         const inputEl = document.getElementById('sendEmailRecipientInput');
+         if (inputEl) {
+             const savedEmail = localStorage.getItem('expense_last_recipient_email');
+             inputEl.value = savedEmail || 'anil.chahar170@gmail.com';
+         }
 
-        // Show a non-blocking modern toast immediately to confirm click registration
-        showModernAlert("Sending Email", `Generating & sending report for ${month} ${year} to <strong>${targetEmail}</strong>...`, "info", 3500);
+         const modalEl = document.getElementById('sendEmailModal');
+         if (modalEl) {
+             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+             modal.show();
+             setTimeout(() => {
+                 if (inputEl) inputEl.focus();
+             }, 350);
+         }
+     }
+     window.openSendEmailModal = openSendEmailModal;
 
-        const summary = `Month: ${month} ${year}\nTotal Expenses: ${stats.totalExpenses}\nCategories: ${stats.totalCategories}\nActive Days: ${stats.totalDays}\nGenerated by: ${stats.userName}`;
+     function selectRecipientChip(email) {
+         const inputEl = document.getElementById('sendEmailRecipientInput');
+         if (inputEl) {
+             inputEl.value = email;
+             inputEl.focus();
+         }
+     }
+     window.selectRecipientChip = selectRecipientChip;
 
-        google.script.run.withSuccessHandler(function (result) {
-            if (btn) {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-            }
-            if (result && result.success) {
-                showModernAlert("Email Sent", `PDF Report successfully emailed to <strong>${targetEmail}</strong>!`, "success");
-            } else {
-                showModernAlert("Error Sending Email", "Error sending email: " + (result && result.error ? result.error : 'Unknown error'), "danger");
-            }
-        }).withFailureHandler(function (err) {
-            if (btn) {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-            }
-            showModernAlert("Server Error", "Server error: " + err, "danger");
-        }).generateAndEmailPDF(reportData.html, fileName, targetEmail, summary);
-    }
+     function clearRecipientInput() {
+         const inputEl = document.getElementById('sendEmailRecipientInput');
+         if (inputEl) {
+             inputEl.value = '';
+             inputEl.focus();
+         }
+     }
+     window.clearRecipientInput = clearRecipientInput;
+
+     function confirmSendEmailModal() {
+         const inputEl = document.getElementById('sendEmailRecipientInput');
+         const email = (inputEl ? inputEl.value : '').trim();
+
+         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+         if (!email || !emailRegex.test(email)) {
+             showModernAlert("Invalid Email", "Please enter a valid email address.", "danger", 3500);
+             if (inputEl) inputEl.focus();
+             return;
+         }
+
+         // Save last used recipient for fast autofill next time
+         localStorage.setItem('expense_last_recipient_email', email);
+
+         // Hide send email modal
+         const modalEl = document.getElementById('sendEmailModal');
+         if (modalEl) {
+             const modal = bootstrap.Modal.getInstance(modalEl);
+             if (modal) modal.hide();
+         }
+
+         // Execute sending to chosen recipient email
+         const targetMonth = sendEmailCurrentTargetMonth || CURRENT_MONTH;
+         emailMonthReport(targetMonth, sendEmailTriggerBtn, email);
+     }
+     window.confirmSendEmailModal = confirmSendEmailModal;
+
+     function sendPreviewPDFEmail() {
+         const month = window.currentPreviewMonth || CURRENT_MONTH;
+         const btn = document.getElementById('pdfPreviewEmailBtn');
+         openSendEmailModal(month, btn);
+     }
+     window.sendPreviewPDFEmail = sendPreviewPDFEmail;
+
+     /**
+      * Email Report Function
+      */
+     function emailMonthReport(monthName, btnElement, recipientEmail) {
+         const month = monthName || CURRENT_MONTH;
+         const year = CURRENT_YEAR;
+         const reportData = getReportHTMLContent(month, year);
+         const { stats } = reportData;
+
+         // If btnElement is not passed, determine it dynamically
+         let btn = btnElement;
+         if (!btn) {
+             const isReportsPageVisible = !document.getElementById('reports-page').classList.contains('d-none');
+             btn = isReportsPageVisible ? document.getElementById('reports-email-report-btn') : document.getElementById('email-report-btn');
+         }
+
+         let originalHtml = '';
+         if (btn) {
+             originalHtml = btn.innerHTML;
+             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+             btn.disabled = true;
+         }
+
+         const fileName = `Expense_Report_${month}_${year}`;
+         const targetEmail = (recipientEmail || '').trim() || (currentUser && currentUser.email ? currentUser.email : 'anil.chahar170@gmail.com');
+
+         // Show alert immediately when the mail is triggered from the button
+         showModernAlert("Sending Mail...", `Generating & sending report for ${month} ${year} to <strong>${targetEmail}</strong>...`, "info", 4000);
+
+         const summary = `Month: ${month} ${year}\nTotal Expenses: ${stats.totalExpenses}\nCategories: ${stats.totalCategories}\nActive Days: ${stats.totalDays}\nGenerated by: ${stats.userName}`;
+
+         google.script.run.withSuccessHandler(function (result) {
+             if (btn) {
+                 btn.innerHTML = originalHtml;
+                 btn.disabled = false;
+             }
+             if (result && result.success) {
+                 // Explicitly show "Mail Sent" alert as requested
+                 showModernAlert("Mail Sent", `PDF Report successfully emailed to <strong>${targetEmail}</strong>!`, "success", 5000);
+             } else {
+                 showModernAlert("Error Sending Mail", "Error sending email: " + (result && result.error ? result.error : 'Unknown error'), "danger", 5000);
+             }
+         }).withFailureHandler(function (err) {
+             if (btn) {
+                 btn.innerHTML = originalHtml;
+                 btn.disabled = false;
+             }
+             showModernAlert("Server Error", "Server error sending mail: " + err, "danger", 5000);
+         }).generateAndEmailPDF(reportData.html, fileName, targetEmail, summary);
+     }
 
     function handleReportsMonthSelect() {
         // Automatically sending email on month dropdown selection disabled as requested.

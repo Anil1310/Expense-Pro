@@ -154,7 +154,15 @@ function buildBackendReportHTML(data, month, year, userName) {
  */
 function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
   const safeFileName = String(fileName || 'Expense_Report_Active_Month');
-  const finalRecipient = recipientEmail || "anil.chahar170@gmail.com";
+  
+  // Clean and sanitize recipient email; supports any valid recipient email ID
+  let finalRecipient = String(recipientEmail || '').trim();
+  if (!finalRecipient || !finalRecipient.includes('@')) {
+    finalRecipient = "anil.chahar170@gmail.com";
+  }
+  // Replace semicolons with commas and remove spaces for multi-recipient support
+  finalRecipient = finalRecipient.replace(/;/g, ',').replace(/\s+/g, '');
+  
   const safeSummary = String(summary || 'Total Expenses: ₹0\nCategories: 0\nActive Days: 0');
 
   // If htmlContent is not passed (e.g. running directly in Apps Script Editor), generate it automatically
@@ -187,6 +195,13 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
       try { tempFile.setTrashed(true); } catch (tErr) {}
     }
 
+    const recipientGreeting = finalRecipient.toLowerCase().includes('anil') ? 'Hello Anil,' : 'Hello,';
+    const plainTextBody = `Expense Statement: ${safeFileName.replace(/_/g, ' ')}\n\n` +
+      `${recipientGreeting}\n\n` +
+      `Your monthly expense statement for ${safeFileName.replace('Expense_Report_', '').replace('Auto_Report_', '').replace(/_/g, ' ')} has been generated. Please find your official statement PDF attached.\n\n` +
+      `Summary:\n${safeSummary}\n\n` +
+      `Best regards,\nExpense Pro Automated System`;
+
     // Create a professional HTML Body for the email
     const htmlBody = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff;">
@@ -197,7 +212,7 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
       
       <div style="padding: 30px; color: #1e293b;">
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Monthly Statement Attached</h2>
-        <p style="font-size: 15px; line-height: 1.6; color: #475569;">Hello Anil,</p>
+        <p style="font-size: 15px; line-height: 1.6; color: #475569;">${recipientGreeting}</p>
         <p style="font-size: 15px; line-height: 1.6; color: #475569;">Your monthly expense statement for <strong>${safeFileName.replace('Expense_Report_', '').replace('Auto_Report_', '').replace(/_/g, ' ')}</strong> has been generated with complete itemized breakdown and category summaries. Please find your official statement PDF attached.</p>
         
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
@@ -218,7 +233,7 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
           </table>
         </div>
         
-        <p style="font-size: 13px; color: #94a3b8; font-style: italic;">Note: This is an automated email from Expense Pro.</p>
+        <p style="font-size: 13px; color: #94a3b8; font-style: italic;">Note: This is an automated email from Expense Pro sent to ${finalRecipient}.</p>
       </div>
       
       <div style="background-color: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
@@ -231,21 +246,22 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
     try {
       MailApp.sendEmail({
         to: finalRecipient,
-        subject: "Expense Statement: " + safeFileName,
+        subject: "Expense Statement: " + safeFileName.replace(/_/g, ' '),
+        body: plainTextBody,
         htmlBody: htmlBody,
         attachments: [pdfBlob],
         name: "Expense Pro"
       });
     } catch (mailErr) {
       console.warn("MailApp error, falling back to GmailApp:", mailErr.message);
-      GmailApp.sendEmail(finalRecipient, "Expense Statement: " + safeFileName, "", {
+      GmailApp.sendEmail(finalRecipient, "Expense Statement: " + safeFileName.replace(/_/g, ' '), plainTextBody, {
         htmlBody: htmlBody,
         attachments: [pdfBlob],
         name: "Expense Pro"
       });
     }
 
-    return { success: true };
+    return { success: true, recipient: finalRecipient };
   } catch (e) {
     console.error("Critical PDF/Email Error:", e.message);
     return { success: false, error: e.message };
