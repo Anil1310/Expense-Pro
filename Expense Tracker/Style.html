@@ -5279,14 +5279,18 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
 
         /* ── Table Section — Floating Rounded Card with gap at top ── */
         #dashboard-page .table-container {
-            height: auto !important;
-            min-height: auto !important;
+            height: calc(100vh - 195px) !important;
+            height: calc(100dvh - 195px) !important;
+            max-height: calc(100vh - 195px) !important;
+            max-height: calc(100dvh - 195px) !important;
             padding-bottom: 0 !important;
-            margin-top: 16px !important;
-            border-radius: 22px 22px 0 0 !important;
+            margin-top: 10px !important;
+            border-radius: 20px 20px 0 0 !important;
             background: #ffffff !important;
             box-shadow: 0 -2px 20px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.06) !important;
-            overflow: visible !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-container {
@@ -5296,9 +5300,10 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
 
         /* Table header — flush with rounded top of card */
         #dashboard-page .table-header {
-            border-radius: 22px 22px 0 0 !important;
+            flex-shrink: 0 !important;
+            border-radius: 20px 20px 0 0 !important;
             background: #ffffff !important;
-            padding: 10px 12px 6px 12px !important;
+            padding: 8px 12px 6px 12px !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-header {
@@ -5309,33 +5314,47 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         #reports-page .table-responsive {
             display: block !important;
             width: 100% !important;
-            height: auto !important;
-            min-height: auto !important;
-            max-height: none !important;
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            min-height: 0 !important;
             overflow-x: auto !important;
-            overflow-y: visible !important;
+            overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
             touch-action: pan-x pan-y !important;
-            border-radius: 12px !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
+            border-radius: 0 0 12px 12px !important;
             background: #ffffff !important;
-            padding-bottom: 0 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+            padding-bottom: 25px !important;
+            box-shadow: none !important;
             position: relative !important;
         }
 
         #dashboard-page .table-responsive {
-            max-height: none !important;
-            overflow-y: visible !important;
+            display: block !important;
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch !important;
             touch-action: pan-x pan-y !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
         }
 
         #reports-page .table-responsive {
-            min-height: auto !important;
-            max-height: none !important;
-            overflow-y: visible !important;
+            max-height: calc(100vh - 200px) !important;
+            max-height: calc(100dvh - 200px) !important;
+            overflow-y: auto !important;
             overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            touch-action: pan-x pan-y !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-responsive,
@@ -7368,35 +7387,47 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
 
     @media (max-width: 768px) {
         html {
-            scroll-behavior: smooth;
+            height: 100% !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            overflow: hidden !important;
             overscroll-behavior: none !important;
             overscroll-behavior-y: none !important;
         }
 
         body.dashboard-active,
         body.reports-active {
-            height: auto !important;
-            overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch;
+            height: 100% !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            overflow: hidden !important;
             overscroll-behavior: none !important;
             overscroll-behavior-y: none !important;
         }
 
         .app-container {
-            height: auto !important;
-            overflow: visible !important;
-            overscroll-behavior: contain !important;
-            overscroll-behavior-y: contain !important;
+            height: 100% !important;
+            max-height: 100dvh !important;
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+            overscroll-behavior-y: none !important;
         }
 
         .main-content {
-            height: auto !important;
-            min-height: 100vh !important;
-            min-height: 100dvh !important;
-            overflow: visible !important;
-            overscroll-behavior: contain !important;
-            overscroll-behavior-y: contain !important;
+            height: 100% !important;
+            max-height: 100dvh !important;
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+            overscroll-behavior-y: none !important;
         }
+
+        #dashboard-page {
+            height: calc(100% - 48px) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+        }
+    }
     /* ── PDF Preview Modal (Full Page on Laptop & Mobile) ── */
     #pdfPreviewModal {
         padding: 0 !important;

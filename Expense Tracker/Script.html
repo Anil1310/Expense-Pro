@@ -4,29 +4,48 @@ Expense Tracker Pro: 2026 JavaScript Code
 
 <script>
     // =========================================================================
-    // Android Studio WebView / Mobile Pull-to-Refresh Protection
-    // Prevents Android SwipeRefreshLayout from intercepting downward drags
-    // at the top of the page, while allowing 100% natural, smooth 60fps scrolling.
+    // Targeted Mobile / Android Studio Table Scroll & Pull-to-Refresh Protection
+    // Ensures vertical scrolling inside tables is completely unrestricted (60fps native momentum)
+    // and prevents Android SwipeRefreshLayout from triggering a reload when pulling down at the top.
     // =========================================================================
-    (function preventAndroidWebViewSwipeRefresh() {
-        let touchStartY = 0;
-        window.addEventListener('touchstart', function (e) {
-            if (e.touches && e.touches.length === 1) {
-                touchStartY = e.touches[0].clientY;
-            }
-        }, { passive: true });
+    function attachTableScrollGuards() {
+        const containers = document.querySelectorAll('.table-responsive, #dashboard-page .table-responsive, #reports-page .table-responsive');
+        containers.forEach(container => {
+            if (container._touchGuarded) return;
+            container._touchGuarded = true;
 
-        window.addEventListener('touchmove', function (e) {
-            if (!e.touches || e.touches.length !== 1) return;
-            const currentY = e.touches[0].clientY;
-            // When user pulls down while already at the top of the document (scrollY <= 0)
-            if (currentY > touchStartY && (window.scrollY <= 0 || document.documentElement.scrollTop <= 0 || document.body.scrollTop <= 0)) {
-                if (e.cancelable) {
-                    e.preventDefault();
+            let lastY = 0;
+            container.addEventListener('touchstart', function (e) {
+                if (e.touches && e.touches.length === 1) {
+                    lastY = e.touches[0].clientY;
                 }
-            }
-        }, { passive: false });
-    })();
+            }, { passive: true });
+
+            container.addEventListener('touchmove', function (e) {
+                if (!e.touches || e.touches.length !== 1) return;
+                const currentY = e.touches[0].clientY;
+                const movingDown = currentY > lastY;
+                lastY = currentY;
+
+                // Only when pulling downwards at the very top boundary (scrollTop <= 0), prevent default
+                // so Android Studio SwipeRefreshLayout does not reload the app!
+                if (movingDown && container.scrollTop <= 0) {
+                    if (e.cancelable) {
+                        e.preventDefault();
+                    }
+                }
+                // When container.scrollTop > 0 or when scrolling downwards through records,
+                // preventDefault is NEVER called, allowing 100% native up & down scrolling!
+            }, { passive: false });
+        });
+    }
+    window.attachTableScrollGuards = attachTableScrollGuards;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        attachTableScrollGuards();
+        setTimeout(attachTableScrollGuards, 500);
+        setTimeout(attachTableScrollGuards, 1500);
+    });
 
     // Global variables
     let expenseData = [];
@@ -1590,6 +1609,7 @@ Expense Tracker Pro: 2026 JavaScript Code
                 </td>`;
             tableBody.appendChild(footer);
         }
+        if (typeof attachTableScrollGuards === 'function') attachTableScrollGuards();
     }
 
     /* ── Mobile Infinite Scroll: Reports ───────────────────────────────── */
