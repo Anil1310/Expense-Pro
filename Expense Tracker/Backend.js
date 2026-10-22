@@ -1220,7 +1220,6 @@ function ensureListSheet() {
             ['Pathology Test', 'Medical'],
             ['Baby Diaper', 'Baby Care'],
             ['Bottle', 'Baby Care'],
-            ['Rudra Baby 6 Months', 'Baby Care'],
             ['Durga Pooja', 'Festivals'],
             ['Diwali', 'Festivals'],
             ['Holi', 'Festivals'],
@@ -1310,7 +1309,6 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
 
         const specificRules = [
             // Baby Care
-            { pattern: /rudra.*6|baby.*6.*month/i, exactName: 'Rudra Baby 6 Months', category: 'Baby Care' },
             { pattern: /rudra.*celebration/i, exactName: 'Rudra Baby 6 Months Celebration', category: 'Baby Care' },
             { pattern: /radhika.*rudra/i, exactName: 'Radhika Chahar + Rudra Chahar', category: 'Baby Care' },
             { pattern: /baby.*diaper|diaper/i, exactName: 'Baby Diaper', category: 'Baby Care' },
@@ -1515,7 +1513,6 @@ function autoEnrichMissingCategoriesAndIcons(ss, listSheet, forceOverride) {
 
         // 4. Ensure mandatory user items exist
         const mandatoryItems = [
-            { exactName: 'Rudra Baby 6 Months', category: 'Baby Care' },
             { exactName: 'Durga Pooja', category: 'Festivals' },
             { exactName: 'Diwali', category: 'Festivals' },
             { pattern: /holi/i, exactName: 'Holi', category: 'Festivals' },
@@ -1655,7 +1652,15 @@ function cleanAllColumnEIconsAndStopTriggers() {
 
                 // Handle 'List' sheet separately
                 if (sheetName === 'List') {
-                    if (lastCol >= 2) {
+                    // Remove any unwanted rows like 'Rudra Baby 6 Months'
+                    for (var rIdx = lastRow; rIdx >= 2; rIdx--) {
+                        var rowVal = (sheet.getRange(rIdx, 2).getValue() || '').toString().trim();
+                        if (/rudra\s*baby\s*6\s*months/i.test(rowVal)) {
+                            sheet.deleteRow(rIdx);
+                        }
+                    }
+                    lastRow = sheet.getLastRow();
+                    if (lastRow > 1 && lastCol >= 2) {
                         var lRange = sheet.getRange(2, 2, lastRow - 1, 1);
                         var lVals = lRange.getValues();
                         for (var i = 0; i < lVals.length; i++) {
