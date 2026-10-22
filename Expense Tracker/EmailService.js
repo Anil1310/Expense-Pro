@@ -160,9 +160,16 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
       ? htmlContent
       : `<!DOCTYPE html><html><body style="font-family: Arial, sans-serif;">${htmlContent}</body></html>`;
 
-    const tempFile = DriveApp.createFile('temp_' + new Date().getTime() + '.html', fullHtml, 'text/html');
-    const pdfBlob = tempFile.getAs('application/pdf').setName(fileName + '.pdf');
-    tempFile.setTrashed(true);
+    let pdfBlob;
+    try {
+      // In-memory conversion without requiring Drive file quota
+      pdfBlob = Utilities.newBlob(fullHtml, 'text/html').getAs('application/pdf').setName(fileName + '.pdf');
+    } catch (blobErr) {
+      console.warn("Direct blob PDF conversion fallback to DriveApp:", blobErr.message);
+      const tempFile = DriveApp.createFile('temp_' + new Date().getTime() + '.html', fullHtml, 'text/html');
+      pdfBlob = tempFile.getAs('application/pdf').setName(fileName + '.pdf');
+      try { tempFile.setTrashed(true); } catch (tErr) {}
+    }
 
     // Create a professional HTML Body for the email
     const htmlBody = `
@@ -204,18 +211,28 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
       </div>
     </div>`;
 
-    const options = {
-      htmlBody: htmlBody,
-      attachments: [pdfBlob],
-      name: "Expense Pro"
-    };
-
-    GmailApp.sendEmail(finalRecipient, "Expense Statement: " + fileName, "", options);
+    // Try MailApp first, then GmailApp as fallback
+    try {
+      MailApp.sendEmail({
+        to: finalRecipient,
+        subject: "Expense Statement: " + fileName,
+        htmlBody: htmlBody,
+        attachments: [pdfBlob],
+        name: "Expense Pro"
+      });
+    } catch (mailErr) {
+      console.warn("MailApp error, falling back to GmailApp:", mailErr.message);
+      GmailApp.sendEmail(finalRecipient, "Expense Statement: " + fileName, "", {
+        htmlBody: htmlBody,
+        attachments: [pdfBlob],
+        name: "Expense Pro"
+      });
+    }
 
     return { success: true };
   } catch (e) {
     console.error("Critical PDF/Email Error:", e.message);
-    return { error: e.message };
+    return { success: false, error: e.message };
   }
 }
 
