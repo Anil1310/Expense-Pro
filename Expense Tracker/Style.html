@@ -50,6 +50,13 @@ Expense Tracker Pro: 2026 CSS Style Code
         box-sizing: border-box;
     }
 
+    html,
+    body {
+        overscroll-behavior: none !important;
+        overscroll-behavior-y: none !important;
+        overscroll-behavior-x: none !important;
+    }
+
     body {
         font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--light-color);
@@ -60,6 +67,7 @@ Expense Tracker Pro: 2026 CSS Style Code
         overflow-x: hidden;
         position: relative;
         z-index: 0;
+        -webkit-overflow-scrolling: touch;
     }
 
     body::before {
@@ -5316,7 +5324,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
             touch-action: pan-x pan-y !important;
-            overscroll-behavior-y: contain;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
             border-radius: 12px !important;
             background: #ffffff !important;
             padding-bottom: 0 !important;
@@ -5325,7 +5334,9 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         }
 
         #dashboard-page .table-responsive {
-            max-height: max(140px, min(50vh, calc(100dvh - 360px))) !important;
+            max-height: max(260px, calc(100dvh - 280px)) !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
         }
 
         #reports-page .table-responsive {
@@ -5333,6 +5344,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: calc(100dvh - 365px) !important;
             max-height: calc(100vh - 365px) !important;
             max-height: calc(100dvh - 365px) !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-responsive,
@@ -7366,6 +7379,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
     @media (max-width: 768px) {
         html {
             scroll-behavior: smooth;
+            overscroll-behavior: none !important;
+            overscroll-behavior-y: none !important;
         }
 
         body.dashboard-active,
@@ -7373,11 +7388,15 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             height: auto !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: none !important;
+            overscroll-behavior-y: none !important;
         }
 
         .app-container {
             height: auto !important;
             overflow: visible !important;
+            overscroll-behavior: contain !important;
+            overscroll-behavior-y: contain !important;
         }
 
         .main-content {
@@ -7385,6 +7404,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: 100vh !important;
             min-height: 100dvh !important;
             overflow: visible !important;
+            overscroll-behavior: contain !important;
+            overscroll-behavior-y: contain !important;
         }
     /* ── PDF Preview Modal (Full Page on Laptop & Mobile) ── */
     #pdfPreviewModal {

@@ -151,6 +151,13 @@ Expense Tracker Pro: 2026 CSS Style Code
         box-sizing: border-box;
     }
 
+    html,
+    body {
+        overscroll-behavior: none !important;
+        overscroll-behavior-y: none !important;
+        overscroll-behavior-x: none !important;
+    }
+
     body {
         font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--light-color);
@@ -161,6 +168,7 @@ Expense Tracker Pro: 2026 CSS Style Code
         overflow-x: hidden;
         position: relative;
         z-index: 0;
+        -webkit-overflow-scrolling: touch;
     }
 
     body::before {
@@ -5417,7 +5425,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
             touch-action: pan-x pan-y !important;
-            overscroll-behavior-y: contain;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
             border-radius: 12px !important;
             background: #ffffff !important;
             padding-bottom: 0 !important;
@@ -5426,7 +5435,9 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         }
 
         #dashboard-page .table-responsive {
-            max-height: max(140px, min(50vh, calc(100dvh - 360px))) !important;
+            max-height: max(260px, calc(100dvh - 280px)) !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
         }
 
         #reports-page .table-responsive {
@@ -5434,6 +5445,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: calc(100dvh - 365px) !important;
             max-height: calc(100vh - 365px) !important;
             max-height: calc(100dvh - 365px) !important;
+            overscroll-behavior-y: contain !important;
+            overscroll-behavior: contain !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-responsive,
@@ -7467,6 +7480,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
     @media (max-width: 768px) {
         html {
             scroll-behavior: smooth;
+            overscroll-behavior: none !important;
+            overscroll-behavior-y: none !important;
         }
 
         body.dashboard-active,
@@ -7474,11 +7489,15 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             height: auto !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: none !important;
+            overscroll-behavior-y: none !important;
         }
 
         .app-container {
             height: auto !important;
             overflow: visible !important;
+            overscroll-behavior: contain !important;
+            overscroll-behavior-y: contain !important;
         }
 
         .main-content {
@@ -7486,6 +7505,8 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             min-height: 100vh !important;
             min-height: 100dvh !important;
             overflow: visible !important;
+            overscroll-behavior: contain !important;
+            overscroll-behavior-y: contain !important;
         }
     /* ── PDF Preview Modal (Full Page on Laptop & Mobile) ── */
     #pdfPreviewModal {
@@ -9213,6 +9234,64 @@ Expense Tracker Pro: 2026 JavaScript Code
 =========================================-->
 
 <script>
+    // =========================================================================
+    // Universal Mobile Pull-to-Refresh & Overscroll Reload Prevention
+    // Prevents mobile browsers (Chrome Android, Safari iOS) from reloading the page
+    // when swiping down to scroll up, while allowing full, smooth scrolling up & down.
+    // =========================================================================
+    (function initMobilePullToRefreshPrevention() {
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        window.addEventListener('touchstart', function (e) {
+            if (e.touches && e.touches.length === 1) {
+                touchStartY = e.touches[0].clientY;
+                touchStartX = e.touches[0].clientX;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', function (e) {
+            if (!e.touches || e.touches.length !== 1) return;
+            const touchY = e.touches[0].clientY;
+            const touchX = e.touches[0].clientX;
+            const deltaY = touchY - touchStartY;
+            const deltaX = Math.abs(touchX - touchStartX);
+
+            // User is swiping finger DOWNWARDS (deltaY > 0)
+            // This is the gesture that triggers native pull-to-refresh when at the top
+            if (deltaY > 0 && deltaY > deltaX) {
+                let el = e.target;
+                let canScrollUp = false;
+
+                // Check if any ancestor container can scroll upwards (scrollTop > 1)
+                while (el && el !== document.documentElement && el !== document.body) {
+                    if (el.scrollHeight > el.clientHeight) {
+                        const style = window.getComputedStyle(el);
+                        const overflowY = style.overflowY;
+                        if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') {
+                            if (el.scrollTop > 1) {
+                                canScrollUp = true;
+                                break;
+                            }
+                        }
+                    }
+                    el = el.parentElement;
+                }
+
+                // Check window or document scroll position
+                if (window.scrollY > 1 || document.documentElement.scrollTop > 1 || document.body.scrollTop > 1) {
+                    canScrollUp = true;
+                }
+
+                // If already at the top of all containers and pulling down, prevent the default
+                // browser pull-to-refresh reload action!
+                if (!canScrollUp && e.cancelable) {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+    })();
+
     // Global variables
     let expenseData = [];
     let allExpenseData = [];
@@ -10543,7 +10622,7 @@ Expense Tracker Pro: 2026 JavaScript Code
             allLatestData = allLatestData.reverse(); // Default: Newest first
         }
 
-        const isMobile = window.innerWidth <= 768;
+        const isMobile = window.innerWidth <= 992 || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth <= 1024);
         let latestData;
         let totalPages = 1;
         const totalItems = allLatestData.length;
@@ -11776,7 +11855,7 @@ Expense Tracker Pro: 2026 JavaScript Code
         }
 
         const totalItems = dataToRender.length;
-        const isMobileR = window.innerWidth <= 768;
+        const isMobileR = window.innerWidth <= 992 || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth <= 1024);
 
         if (isMobileR) {
             // Mobile: Infinite Scroll
@@ -14033,6 +14112,9 @@ max-height: 85vh;
 height: auto;
 overflow-y: auto !important; /* Fixed: Changed from hidden to auto for mobile scrolling */
 -webkit-overflow-scrolling: touch !important; /* Smooth iOS/Android swipe */
+overscroll-behavior-y: contain !important;
+overscroll-behavior: contain !important;
+touch-action: pan-x pan-y !important;
 border: 1px solid #e0e0e0;
 border-radius: 8px;
 margin-bottom: 15px;
