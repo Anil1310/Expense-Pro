@@ -168,6 +168,8 @@ function doPost(e) {
             checkLogin: (...args) => checkLogin(...args),
             deleteEntry: (...args) => deleteEntry(...args),
             generateAndEmailPDF: (...args) => generateAndEmailPDF(...args),
+            sendEmailViaGmail: (...args) => sendEmailViaGmail(...args),
+            triggerGmailPermissionCheck: (...args) => triggerGmailPermissionCheck(...args),
             getAllData: (...args) => getAllData(...args),
             getConsolidatedData: (...args) => getConsolidatedData(...args),
             getEntryByUniqueId: (...args) => getEntryByUniqueId(...args),

@@ -269,9 +269,28 @@ function generateAndEmailPDF(htmlContent, fileName, recipientEmail, summary) {
 }
 
 /**
+ * Direct Gmail sending function using GmailApp
+ */
+function sendEmailViaGmail(recipientEmail, subject, htmlBody, plainTextBody, attachments) {
+  try {
+    const finalRecipient = (recipientEmail || '').trim() || "anil.chahar170@gmail.com";
+    GmailApp.sendEmail(finalRecipient, subject || "Expense Statement", plainTextBody || "", {
+      htmlBody: htmlBody || "",
+      attachments: attachments || [],
+      name: "Expense Pro"
+    });
+    return { success: true, recipient: finalRecipient, provider: "GmailApp" };
+  } catch (err) {
+    console.error("sendEmailViaGmail Error:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Run this function manually in the Apps Script Editor (script.google.com)
  * to trigger the Google OAuth Authorization dialog for Gmail.
  */
 function triggerGmailPermissionCheck() {
   GmailApp.sendEmail("anil.chahar170@gmail.com", "Expenses Pro Scope Authorization", "Gmail permissions authorized successfully!");
+  return { success: true, message: "Gmail permissions authorized successfully!" };
 }
