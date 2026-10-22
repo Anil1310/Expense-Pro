@@ -90,7 +90,7 @@ let html = indexTemplate;
 html = html.replace(/<\?!=include\('Expense Tracker\/Style'\); \?>/i, styles);
 
 // 2. Initial Data fallback
-html = html.replace(/window\.SERVER_INITIAL_DATA = <\?!= initialData \?>;/i, "window.SERVER_INITIAL_DATA = null;");
+html = html.replace(/window\.SERVER_INITIAL_DATA = [^;]+;/i, "window.SERVER_INITIAL_DATA = null;");
 
 // 3. Inject Client Script
 html = html.replace(/<\?!=include\('Expense Tracker\/Script'\); \?>/i, clientScript);

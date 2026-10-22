@@ -29,7 +29,7 @@ Expense Tracker Pro: 2026 Frontend Code
 
   <script>
     // Global initial data from server
-    window.SERVER_INITIAL_DATA = <?!= initialData ?>;
+    window.SERVER_INITIAL_DATA = <?!= (typeof initialData !== 'undefined' && initialData) ? initialData : 'null' ?>;
   </script>
 
 </head>
@@ -55,7 +55,7 @@ Expense Tracker Pro: 2026 Frontend Code
   </div>
 
   <!-- Login Section -->
-  <div id="login-section" class="d-none">
+  <div id="login-section">
     <div class="login-container">
       <!-- Logo Container -->
       <div class="login-logo-container">
