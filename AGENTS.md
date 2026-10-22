@@ -1,6 +1,8 @@
+
 # Expense Pro - Development & Deployment Guidelines
 
 ## Permanent Project Settings
+
 - **Project Name**: `expensepro`
 - **GitHub Repository**: `git@github.com:Anil1310/Expense-Pro.git` (Branch: `main`)
 - **Primary Production Domain**: `https://expenselive.vercel.app/`
@@ -9,7 +11,9 @@
 ---
 
 ## Dynamic Deployment Workflow
+
 Whenever the user makes changes and requests to save, update, upload, or deploy:
+
 1. **Build**: Run `npm run build` to assemble `index.html` and compile from `Expense Tracker/` files.
 2. **Commit & Push**:
    ```bash
