@@ -3,6 +3,31 @@ Expense Tracker Pro: 2026 JavaScript Code
 =========================================-->
 
 <script>
+    // =========================================================================
+    // Android Studio WebView / Mobile Pull-to-Refresh Protection
+    // Prevents Android SwipeRefreshLayout from intercepting downward drags
+    // at the top of the page, while allowing 100% natural, smooth 60fps scrolling.
+    // =========================================================================
+    (function preventAndroidWebViewSwipeRefresh() {
+        let touchStartY = 0;
+        window.addEventListener('touchstart', function (e) {
+            if (e.touches && e.touches.length === 1) {
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', function (e) {
+            if (!e.touches || e.touches.length !== 1) return;
+            const currentY = e.touches[0].clientY;
+            // When user pulls down while already at the top of the document (scrollY <= 0)
+            if (currentY > touchStartY && (window.scrollY <= 0 || document.documentElement.scrollTop <= 0 || document.body.scrollTop <= 0)) {
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+    })();
+
     // Global variables
     let expenseData = [];
     let allExpenseData = [];
@@ -27,8 +52,8 @@ Expense Tracker Pro: 2026 JavaScript Code
     const DASHBOARD_PER_PAGE = 30;
     const REPORTS_PER_PAGE = 30;
 
-    // Mobile Infinite Scroll State
-    const MOBILE_BATCH_SIZE = 100;         // Records loaded per scroll-batch
+    // Mobile Infinite Scroll State (Loads all records e.g. 140+ in April instantly)
+    const MOBILE_BATCH_SIZE = 500;         // Records loaded per scroll-batch
     let mobileDashboardAllData = [];       // Full sorted dataset for dashboard
     let mobileDashboardLoadedCount = 0;    // How many rows are currently in DOM
     let mobileDashboardObserver = null;    // IntersectionObserver instance
@@ -5119,16 +5144,15 @@ color: #ffc107 !important;
             }, 500); // Reduced from 2000ms
         }
 
-        // Smart background polling for multi-user sync (every 90 seconds)
+        // Auto-refresh the app every 2 minutes for updates in the background (silent & smooth)
         setInterval(() => {
-            // Only invalidate the keys that change frequently so other users' changes appear
             if (window.expenseCache) {
                 window.expenseCache.invalidate('all_data');
                 window.expenseCache.invalidate(`monthly_${CURRENT_MONTH}`);
             }
-            // Silently refresh the currently visible page only
+            // Silently refresh the currently visible page only without interrupting scrolling
             autoRefreshData();
-        }, 90 * 1000); // Every 90 seconds
+        }, 2 * 60 * 1000); // Exactly every 2 minutes
 
         // Add enter key support for login
         const passwordInput = document.getElementById('password');

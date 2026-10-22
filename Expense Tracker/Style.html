@@ -5311,14 +5311,11 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
             width: 100% !important;
             height: auto !important;
             min-height: auto !important;
-            max-height: calc(100vh - 165px) !important;
-            max-height: calc(100dvh - 165px) !important;
+            max-height: none !important;
             overflow-x: auto !important;
-            overflow-y: auto !important;
+            overflow-y: visible !important;
             -webkit-overflow-scrolling: touch !important;
             touch-action: pan-x pan-y !important;
-            overscroll-behavior-y: contain !important;
-            overscroll-behavior: contain !important;
             border-radius: 12px !important;
             background: #ffffff !important;
             padding-bottom: 0 !important;
@@ -5327,22 +5324,18 @@ MONTHS SUBMENU - UPDATED FOR ALL 12 MONTHS
         }
 
         #dashboard-page .table-responsive {
-            max-height: max(320px, calc(100dvh - 260px)) !important;
-            overflow-y: auto !important;
+            max-height: none !important;
+            overflow-y: visible !important;
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch !important;
             touch-action: pan-x pan-y !important;
-            overscroll-behavior-y: contain !important;
-            overscroll-behavior: contain !important;
         }
 
         #reports-page .table-responsive {
-            min-height: calc(100vh - 365px) !important;
-            min-height: calc(100dvh - 365px) !important;
-            max-height: calc(100vh - 365px) !important;
-            max-height: calc(100dvh - 365px) !important;
-            overscroll-behavior-y: contain !important;
-            overscroll-behavior: contain !important;
+            min-height: auto !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+            overflow-x: auto !important;
         }
 
         [data-theme="dark"] #dashboard-page .table-responsive,
